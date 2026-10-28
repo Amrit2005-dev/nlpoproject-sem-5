@@ -1,0 +1,12 @@
+/* ==========================================================================
+   MASTER STYLESHEET
+   Bundles all modular CSS components for the AI Workspace website
+   ========================================================================== */
+
+@import './variables.css';
+@import './layout.css';
+@import './sidebar.css';
+@import './cards.css';
+@import './tasks.css';
+@import './chat.css';
+@import './components.css';

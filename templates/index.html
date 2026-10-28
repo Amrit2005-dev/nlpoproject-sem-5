@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Workspace - Layout Reference Template</title>
+  <!-- Google Fonts: Plus Jakarta Sans & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="../css/style.css" />
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <!-- Mobile Backdrop -->
+  <div class="mobile-backdrop" id="mobileBackdrop" onclick="toggleSidebar()"></div>
+
+  <div class="app-container">
+    <!-- ===================================================================
+         SIDEBAR COMPONENT TEMPLATE
+         =================================================================== -->
+    <aside class="sidebar-container" id="sidebar">
+      <div class="sidebar-header">
+        <button class="new-chat-btn" onclick="startNewChat()">
+          <i data-lucide="square-pen" style="width: 16px; height: 16px;"></i>
+          <span>New chat</span>
+        </button>
+        <button class="sidebar-toggle-btn" onclick="toggleSidebar()" title="Collapse sidebar">
+          <i data-lucide="panel-left-close" style="width: 18px; height: 18px;"></i>
+        </button>
+      </div>
+
+      <div class="sidebar-nav">
+        <button class="nav-item active" onclick="showTasksView()">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <i data-lucide="check-square" style="width: 16px; height: 16px;"></i>
+            <span>My Tasks</span>
+          </div>
+          <span class="nav-badge" id="sidebarTaskCount">2</span>
+        </button>
+
+        <button class="nav-item" onclick="openSavedFilesModal()">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <i data-lucide="file-text" style="width: 16px; height: 16px;"></i>
+            <span>Saved Files</span>
+          </div>
+        </button>
+      </div>
+
+      <div class="sidebar-search">
+        <div class="search-box">
+          <i data-lucide="search" style="width: 14px; height: 14px; color: var(--text-subtle);"></i>
+          <input type="text" placeholder="Search chats..." id="chatSearchInput" oninput="filterChats()" />
+        </div>
+      </div>
+
+      <div class="conversations-container" id="conversationsList">
+        <div class="chat-history-item active" onclick="loadChat(1)">
+          <div style="display: flex; flex-direction: column; overflow: hidden; padding-right: 8px;">
+            <span style="font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+              UX Strategy & Architecture
+            </span>
+            <span style="font-size: 11px; color: var(--text-subtle); margin-top: 2px;">2 hours ago</span>
+          </div>
+          <div class="chat-item-actions">
+            <button style="background: none; border: none; color: var(--text-subtle); cursor: pointer;"><i data-lucide="pencil" style="width: 13px; height: 13px;"></i></button>
+            <button style="background: none; border: none; color: var(--text-subtle); cursor: pointer;"><i data-lucide="trash-2" style="width: 13px; height: 13px;"></i></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <button class="settings-btn" onclick="openSettingsModal()">
+          <i data-lucide="settings" style="width: 17px; height: 17px;"></i>
+          <span>Settings</span>
+        </button>
+        <button style="background: none; border: none; color: var(--text-subtle); cursor: pointer;" onclick="openSettingsModal()">
+          <i data-lucide="more-horizontal" style="width: 18px; height: 18px;"></i>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ===================================================================
+         MAIN WORKSPACE AREA
+         =================================================================== -->
+    <div class="main-wrapper">
+      <!-- HEADER COMPONENT TEMPLATE -->
+      <header class="header-bar">
+        <div class="header-left">
+          <button class="sidebar-toggle-btn" onclick="toggleSidebar()" title="Toggle sidebar">
+            <i data-lucide="panel-left" style="width: 19px; height: 19px;"></i>
+          </button>
+          <button class="new-chat-btn" onclick="startNewChat()" style="flex: none; padding: 7px 14px;">
+            <i data-lucide="square-pen" style="width: 15px; height: 15px;"></i>
+            <span>New chat</span>
+          </button>
+        </div>
+
+        <div class="header-right">
+          <button class="sidebar-toggle-btn" onclick="toggleTheme()" title="Toggle Dark/Light theme" id="themeToggleBtn">
+            <i data-lucide="moon" style="width: 18px; height: 18px; color: var(--accent-primary);" id="themeIcon"></i>
+          </button>
+
+          <div style="position: relative;">
+            <button class="user-profile-pill" onclick="toggleProfileDropdown()">
+              <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" alt="sarvatha" class="user-avatar-img" />
+              <span style="font-size: 13.5px; font-weight: 600;">sarvatha</span>
+              <i data-lucide="chevron-down" style="width: 14px; height: 14px; color: var(--text-subtle);"></i>
+            </button>
+
+            <div class="profile-dropdown-menu" id="profileDropdown" style="display: none;">
+              <div style="padding: 8px 10px; border-bottom: 1px solid var(--border-subtle); margin-bottom: 4px;">
+                <p style="font-size: 13.5px; font-weight: 700;">sarvatha</p>
+                <p style="font-size: 12px; color: var(--text-muted);">sarvatha@example.com</p>
+              </div>
+              <button class="dropdown-item" onclick="openSettingsModal()"><i data-lucide="settings" style="width: 15px; height: 15px;"></i> Workspace Settings</button>
+              <button class="dropdown-item" onclick="toggleTheme()"><i data-lucide="sun" style="width: 15px; height: 15px;"></i> Toggle Theme</button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- CHAT & DASHBOARD VIEWPORT -->
+      <main class="chat-viewport">
+        <div class="chat-scroll-area" id="chatScrollArea">
+          <!-- HERO HEADING MATCHING IMAGE 2 -->
+          <div class="hero-section" id="heroSection">
+            <h1 class="hero-title">How can I help you today?</h1>
+          </div>
+
+          <!-- 3 SUGGESTION CARDS MATCHING IMAGE 2 -->
+          <div class="suggested-cards-grid" id="suggestedCardsGrid">
+            <!-- Card 1: Previously viewed files -->
+            <div class="suggested-card" onclick="openSavedFilesModal()">
+              <div class="card-top-label">
+                <i data-lucide="file-text" style="width: 18px; height: 18px; color: var(--text-subtle);"></i>
+                <span>Previously viewed files</span>
+              </div>
+              <div class="card-bottom-content">
+                <p class="card-bottom-sub">UX_Strategy_Brief_2026.pdf • IndicRAG_Summary.json</p>
+              </div>
+            </div>
+
+            <!-- Card 2: Summarize your last meeting -->
+            <div class="suggested-card" onclick="sendPrompt('Can you summarize my last meeting (UX Strategy Meet up)?')">
+              <div class="card-top-label sparkle">
+                <i data-lucide="sparkles" style="width: 16px; height: 16px;"></i>
+                <span>Summarize your last meeting</span>
+              </div>
+              <div class="card-bottom-content" style="display: flex; align-items: center; gap: 12px;">
+                <div class="meeting-avatar-wrap">
+                  <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80" alt="avatar" />
+                  <span class="status-dot"></span>
+                </div>
+                <div>
+                  <h4 class="card-bottom-title">UX Strategy Meet up</h4>
+                  <p class="card-bottom-sub">1 Apr 2025, 14:00 pm</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 3: Suggested Task -->
+            <div class="suggested-card" onclick="sendPrompt('Please help me conduct UX Research and break down the tasks')">
+              <div class="card-top-label">
+                <i data-lucide="compass" style="width: 17px; height: 17px; color: var(--text-subtle);"></i>
+                <span>Suggested Task</span>
+              </div>
+              <div class="card-bottom-content">
+                <h4 class="card-bottom-title">Conduct UX Research</h4>
+                <p class="card-bottom-sub">Usability audits & user flow analysis</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- MY TASKS BOARD MATCHING IMAGE 2 -->
+          <div class="tasks-section" id="tasksSection">
+            <div class="tasks-card">
+              <div class="tasks-header">
+                <div class="tasks-title-wrap">
+                  <h3 class="tasks-title">My Tasks</h3>
+                  <span class="nav-badge" id="taskCountBadge">2</span>
+                </div>
+
+                <div class="tasks-search-wrap">
+                  <i data-lucide="search" style="width: 14px; height: 14px; color: var(--text-subtle);"></i>
+                  <input type="text" placeholder="Search for name..." id="taskSearchInput" oninput="filterTasks()" />
+                  <button class="add-task-icon-btn" onclick="promptAddTask()" title="Add Task">
+                    <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
+                  </button>
+                </div>
+
+                <button class="prioritize-btn" onclick="prioritizeTasks()">
+                  <i data-lucide="sparkles" style="width: 14px; height: 14px;"></i>
+                  <span>Prioritize Tasks</span>
+                </button>
+              </div>
+
+              <div class="tasks-list" id="tasksList">
+                <div class="task-item">
+                  <div class="task-item-left">
+                    <button class="task-checkbox" onclick="toggleTask(this)">
+                      <i data-lucide="check" style="width: 13px; height: 13px; display: none;"></i>
+                    </button>
+                    <span class="task-title">Conduct UX Research for chat flow</span>
+                  </div>
+                  <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; background-color: rgba(239, 68, 68, 0.1); color: #ef4444;">HIGH</span>
+                </div>
+
+                <div class="task-item">
+                  <div class="task-item-left">
+                    <button class="task-checkbox checked" onclick="toggleTask(this)">
+                      <i data-lucide="check" style="width: 13px; height: 13px; display: block;"></i>
+                    </button>
+                    <span class="task-title completed">Review IndicRAG-QA benchmark results</span>
+                  </div>
+                  <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; background-color: rgba(245, 158, 11, 0.1); color: #f59e0b;">MEDIUM</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ACTIVE MESSAGE THREAD CONTAINER (Dynamically Populated) -->
+          <div id="messagesThread" style="max-width: 840px; width: 100%; margin: 0 auto; display: none;"></div>
+        </div>
+
+        <!-- FLOATING BOTTOM INPUT BAR MATCHING IMAGE 2 -->
+        <div class="bottom-input-container">
+          <form class="bottom-input-pill" onsubmit="handleChatSubmit(event)">
+            <i data-lucide="sparkles" style="width: 18px; height: 18px; color: var(--accent-sparkle); margin-left: 4px; margin-right: 2px;"></i>
+            <input
+              type="text"
+              class="bottom-input-field"
+              id="chatInputField"
+              placeholder="Ask or search for anything. Use @ to tag a file or collection."
+              autocomplete="off"
+            />
+            <button type="submit" class="send-button" title="Send message">
+              <i data-lucide="arrow-right" style="width: 17px; height: 17px;"></i>
+            </button>
+          </form>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- SAVED FILES MODAL TEMPLATE -->
+  <div class="modal-overlay" id="filesModal" style="display: none;" onclick="closeModal('filesModal')">
+    <div class="modal-dialog" onclick="event.stopPropagation()">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+        <h3 style="font-size: 16px; font-weight: 700;">Saved Files</h3>
+        <button onclick="closeModal('filesModal')" style="background: none; border: none; cursor: pointer; color: var(--text-subtle);"><i data-lucide="x" style="width: 18px; height: 18px;"></i></button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div class="task-item">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <i data-lucide="file-text" style="width: 18px; height: 18px; color: var(--accent-primary);"></i>
+            <div>
+              <p style="font-size: 13.5px; font-weight: 600;">UX_Strategy_Brief_2026.pdf</p>
+              <p style="font-size: 11px; color: var(--text-subtle);">2.4 MB • Updated 1 Apr 2025, 14:00 pm</p>
+            </div>
+          </div>
+          <button class="btn-component btn-outline" style="padding: 4px 10px; font-size: 12px;" onclick="closeModal('filesModal'); sendPrompt('Analyze UX_Strategy_Brief_2026.pdf')">Ask AI</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPTS & TEMPLATE CONTROLLERS -->
+  <script>
+    lucide.createIcons();
+
+    // Sidebar Toggle Controller
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const backdrop = document.getElementById('mobileBackdrop');
+      sidebar.classList.toggle('collapsed');
+      backdrop.classList.toggle('active');
+    }
+
+    // Theme Toggle Controller
+    function toggleTheme() {
+      const html = document.documentElement;
+      const currentTheme = html.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', newTheme);
+      const icon = document.getElementById('themeIcon');
+      if (newTheme === 'dark') {
+        icon.setAttribute('data-lucide', 'sun');
+        icon.style.color = '#fbbf24';
+      } else {
+        icon.setAttribute('data-lucide', 'moon');
+        icon.style.color = 'var(--accent-primary)';
+      }
+      lucide.createIcons();
+    }
+
+    // User Profile Dropdown Toggle
+    function toggleProfileDropdown() {
+      const dropdown = document.getElementById('profileDropdown');
+      dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // Modal Helpers
+    function openSavedFilesModal() {
+      document.getElementById('filesModal').style.display = 'flex';
+    }
+    function closeModal(id) {
+      document.getElementById(id).style.display = 'none';
+    }
+
+    // Send Prompt into Chat Thread
+    function sendPrompt(text) {
+      document.getElementById('chatInputField').value = text;
+      handleChatSubmit();
+    }
+
+    // Handle Chat Submit
+    function handleChatSubmit(e) {
+      if (e) e.preventDefault();
+      const input = document.getElementById('chatInputField');
+      const text = input.value.trim();
+      if (!text) return;
+
+      input.value = '';
+
+      // Hide hero elements, show message thread
+      document.getElementById('heroSection').style.display = 'none';
+      document.getElementById('suggestedCardsGrid').style.display = 'none';
+      document.getElementById('tasksSection').style.display = 'none';
+
+      const thread = document.getElementById('messagesThread');
+      thread.style.display = 'block';
+
+      // Append User message bubble
+      thread.innerHTML += `
+        <div class="message-row user">
+          <div class="message-avatar user"><i data-lucide="user" style="width: 16px; height: 16px;"></i></div>
+          <div class="message-content-wrap">
+            <div class="message-bubble user">${text}</div>
+            <div class="message-footer"><span>Just now</span></div>
+          </div>
+        </div>
+      `;
+
+      // Simulate AI Assistant response bubble
+      setTimeout(() => {
+        thread.innerHTML += `
+          <div class="message-row assistant">
+            <div class="message-avatar assistant"><i data-lucide="sparkles" style="width: 16px; height: 16px;"></i></div>
+            <div class="message-content-wrap">
+              <div class="message-bubble assistant">
+                <p>I have processed your query: <strong>${text}</strong>.</p>
+                <p style="margin-top: 6px;">Here is the synthesized response matching your IndicRAG-QA and productivity workspace context.</p>
+              </div>
+              <div class="message-footer"><span>Just now</span></div>
+            </div>
+          </div>
+        `;
+        lucide.createIcons();
+        document.getElementById('chatScrollArea').scrollTop = document.getElementById('chatScrollArea').scrollHeight;
+      }, 500);
+
+      lucide.createIcons();
+    }
+
+    // Reset to New Chat / Home state
+    function startNewChat() {
+      document.getElementById('heroSection').style.display = 'block';
+      document.getElementById('suggestedCardsGrid').style.display = 'grid';
+      document.getElementById('tasksSection').style.display = 'block';
+      document.getElementById('messagesThread').style.display = 'none';
+      document.getElementById('messagesThread').innerHTML = '';
+      if (window.innerWidth <= 768) toggleSidebar();
+    }
+
+    // Task completion toggle
+    function toggleTask(btn) {
+      btn.classList.toggle('checked');
+      const title = btn.nextElementSibling;
+      title.classList.toggle('completed');
+      const checkIcon = btn.querySelector('svg, i');
+      if (btn.classList.contains('checked')) {
+        checkIcon.style.display = 'block';
+      } else {
+        checkIcon.style.display = 'none';
+      }
+    }
+  </script>
+</body>
+</html>
