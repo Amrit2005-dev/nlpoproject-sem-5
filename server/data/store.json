@@ -1,0 +1,71 @@
+{
+  "users": [
+    {
+      "id": "demo-user-1",
+      "name": "Sarvatha",
+      "email": "sarvatha@example.com",
+      "passwordHash": "$2a$10$wT70Ivd7dE3/h953k25Vb.k3uFwH1v0Vq.vj0G4k23.YhB/8.uDsy",
+      "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
+      "createdAt": "2026-10-28T10:17:39.749Z"
+    }
+  ],
+  "conversations": [
+    {
+      "id": "conv-sample-1",
+      "userId": "demo-user-1",
+      "title": "UX Strategy & Architecture",
+      "createdAt": "2026-10-28T08:17:39.750Z",
+      "updatedAt": "2026-10-28T08:17:39.750Z",
+      "messages": [
+        {
+          "id": "msg-1",
+          "sender": "user",
+          "text": "Can you summarize the main goals for our UX Strategy meetup?",
+          "timestamp": "2026-10-28T08:17:39.750Z"
+        },
+        {
+          "id": "msg-2",
+          "sender": "assistant",
+          "text": "Here are the key takeaways from the UX Strategy meetup:\n\n1. **User-Centric Architecture:** Focus on intuitive navigation and responsive design for multi-device workflows.\n2. **Performance Optimization:** Achieve sub-100ms interaction feedback with reactive state handling.\n3. **Modern Visual Aesthetics:** Clean layouts, accessible contrast ratios, and cohesive dark/light themes.\n\nWould you like me to convert these into actionable tasks for your workspace?",
+          "timestamp": "2026-10-28T08:17:41.250Z"
+        }
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task-1",
+      "userId": "demo-user-1",
+      "title": "Conduct UX Research for chat flow",
+      "completed": false,
+      "priority": "high",
+      "createdAt": "2026-10-28T09:17:39.750Z"
+    },
+    {
+      "id": "task-2",
+      "userId": "demo-user-1",
+      "title": "Review IndicRAG-QA benchmark results",
+      "completed": true,
+      "priority": "medium",
+      "createdAt": "2026-10-28T05:17:39.750Z"
+    }
+  ],
+  "files": [
+    {
+      "id": "file-1",
+      "userId": "demo-user-1",
+      "name": "UX_Strategy_Brief_2026.pdf",
+      "size": "2.4 MB",
+      "type": "pdf",
+      "updatedAt": "1 Apr 2025, 14:00 pm"
+    },
+    {
+      "id": "file-2",
+      "userId": "demo-user-1",
+      "name": "IndicRAG_Benchmark_Summary.json",
+      "size": "840 KB",
+      "type": "json",
+      "updatedAt": "24 Oct 2026, 11:30 am"
+    }
+  ]
+}

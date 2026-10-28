@@ -1,0 +1,11 @@
+{
+  "name": "nlp-project-ai-workspace",
+  "version": "1.0.0",
+  "description": "Modern Responsive AI Chat Workspace & Productivity Suite",
+  "scripts": {
+    "server": "node server/src/index.js",
+    "client": "npm.cmd --prefix client run dev",
+    "build": "node client/node_modules/vite/bin/vite.js build client",
+    "start": "node server/src/index.js"
+  }
+}
