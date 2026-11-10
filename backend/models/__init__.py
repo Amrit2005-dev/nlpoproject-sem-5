@@ -1,0 +1,38 @@
+# Models package
+from backend.models.schemas import (
+    DocumentSummary,
+    UploadResult,
+    ChunkDetail,
+    ChunkSearchResult,
+    Citation,
+    SearchRequest,
+    RagAskRequest,
+    RagAskResponse,
+    PageMetadataResponse,
+    UserLoginRequest,
+    UserRegisterRequest,
+    AuthResponse,
+    ChatCreateRequest,
+    ChatMessageRequest,
+    TaskCreateRequest,
+    TaskUpdateRequest,
+)
+
+__all__ = [
+    "DocumentSummary",
+    "UploadResult",
+    "ChunkDetail",
+    "ChunkSearchResult",
+    "Citation",
+    "SearchRequest",
+    "RagAskRequest",
+    "RagAskResponse",
+    "PageMetadataResponse",
+    "UserLoginRequest",
+    "UserRegisterRequest",
+    "AuthResponse",
+    "ChatCreateRequest",
+    "ChatMessageRequest",
+    "TaskCreateRequest",
+    "TaskUpdateRequest",
+]
