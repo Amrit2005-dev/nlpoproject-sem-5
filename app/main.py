@@ -28,6 +28,7 @@ from app.chunking import chunk_document_pages, split_into_chunks
 from app.extraction import extract_document_pages, ExtractedPage
 from app import db
 from app import llm
+from backend.intent_classifier import is_comprehensive_explanation_request
 from app.rag.question_segmentation import (
     check_required_facets,
     make_missing_facet_queries,
@@ -569,6 +570,12 @@ def ask_question(req: RagAskRequest) -> RagAskResponse:
     query = req.query.strip()
     if not query:
         raise HTTPException(status_code=422, detail="Question cannot be empty.")
+    comprehensive_explanation = is_comprehensive_explanation_request(query)
+    if comprehensive_explanation and req.document_id is None:
+        raise HTTPException(
+            status_code=422,
+            detail="Select the document you want explained in full, then ask again.",
+        )
 
     question_plan = plan_retrieval(query)
     planned_queries = question_plan.queries
@@ -580,37 +587,67 @@ def ask_question(req: RagAskRequest) -> RagAskResponse:
         batch_size=32,
     )
 
-    retrieval_sets = []
-    for query_embedding in query_embeddings:
-        retrieval_sets.append(db.search_similar_chunks(
-            query_vector=query_embedding,
-            top_k=max(req.top_k, 4),
+    if comprehensive_explanation:
+        documents = db.list_documents()
+        document_summary = next(
+            (
+                document
+                for document in documents
+                if str(document["id"]) == str(req.document_id)
+            ),
+            None,
+        )
+        if not document_summary:
+            raise HTTPException(status_code=404, detail="Selected document was not found.")
+        matching_chunks = db.search_similar_chunks(
+            query_vector=query_embeddings[0],
+            top_k=int(document_summary.get("chunk_count", 0)),
             document_id=req.document_id,
-            min_similarity=0.0,
-        ))
+            min_similarity=-1.0,
+        )
+        matching_chunks.sort(key=lambda chunk: chunk["chunk_index"])
+        evidence_check = check_required_facets(
+            question_plan.required_facets, matching_chunks
+        )
+        retry_queries: list[str] = []
+    else:
+        retrieval_sets = []
+        for query_embedding in query_embeddings:
+            retrieval_sets.append(db.search_similar_chunks(
+                query_vector=query_embedding,
+                top_k=max(req.top_k, 4),
+                document_id=req.document_id,
+                min_similarity=0.0,
+            ))
 
-    matching_chunks = reciprocal_rank_fusion(retrieval_sets)[:req.top_k]
-    evidence_check = check_required_facets(question_plan.required_facets, matching_chunks)
-    retry_queries: list[str] = []
-    if evidence_check["missing"]:
-        retry_queries = make_missing_facet_queries(query, evidence_check["missing"])
-        if retry_queries:
-            retry_embeddings = get_embedding_model().encode(
-                retry_queries, normalize_embeddings=True, convert_to_numpy=True,
-                show_progress_bar=False, batch_size=32,
-            )
-            retry_sets = [db.search_similar_chunks(
-                query_vector=retry_embedding, top_k=max(req.top_k, 4),
-                document_id=req.document_id, min_similarity=0.0,
-            ) for retry_embedding in retry_embeddings]
-            matching_chunks = reciprocal_rank_fusion(retrieval_sets + retry_sets)[:req.top_k]
-            evidence_check = check_required_facets(question_plan.required_facets, matching_chunks)
+        matching_chunks = reciprocal_rank_fusion(retrieval_sets)[:req.top_k]
+        evidence_check = check_required_facets(
+            question_plan.required_facets, matching_chunks
+        )
+        retry_queries: list[str] = []
+        if evidence_check["missing"]:
+            retry_queries = make_missing_facet_queries(query, evidence_check["missing"])
+            if retry_queries:
+                retry_embeddings = get_embedding_model().encode(
+                    retry_queries, normalize_embeddings=True, convert_to_numpy=True,
+                    show_progress_bar=False, batch_size=32,
+                )
+                retry_sets = [db.search_similar_chunks(
+                    query_vector=retry_embedding, top_k=max(req.top_k, 4),
+                    document_id=req.document_id, min_similarity=0.0,
+                ) for retry_embedding in retry_embeddings]
+                matching_chunks = reciprocal_rank_fusion(retrieval_sets + retry_sets)[:req.top_k]
+                evidence_check = check_required_facets(
+                    question_plan.required_facets, matching_chunks
+                )
     question_metadata = question_plan.to_dict()
     question_metadata["evidence_check"] = evidence_check
     question_metadata["retry_queries"] = retry_queries
 
     best_similarity = max((float(chunk.get("similarity", 0.0)) for chunk in matching_chunks), default=-1.0)
-    if not matching_chunks or best_similarity < 0.20:
+    if not matching_chunks or (
+        not comprehensive_explanation and best_similarity < 0.20
+    ):
         return RagAskResponse(
             query=query,
             answer="The provided document does not contain this information.",
@@ -631,6 +668,7 @@ def ask_question(req: RagAskRequest) -> RagAskResponse:
             question_labels=question_plan.labels,
             required_facets=question_plan.required_facets,
             missing_facets=evidence_check["missing"],
+            comprehensive_document=comprehensive_explanation,
         )
     except Exception as exc:
         logger.error("LLM generation failed: %s", exc)

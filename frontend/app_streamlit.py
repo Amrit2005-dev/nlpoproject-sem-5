@@ -19,6 +19,7 @@ try:
     from app.main import (
         _process_and_store_document as local_process_document,
         get_embedding_model as local_get_embedding_model,
+        is_comprehensive_explanation_request as local_is_comprehensive_explanation,
     )
     HAS_LOCAL_MODULES = True
 except Exception:
@@ -317,38 +318,63 @@ with tab_ask:
                     except Exception as exc:
                         st.error(f"Failed to reach API: {exc}")
                 elif HAS_LOCAL_MODULES:
-                    # In-process local execution
-                    emb_model = local_get_embedding_model()
-                    q_vec = emb_model.encode(
-                        user_query.strip(),
-                        normalize_embeddings=True,
-                        convert_to_numpy=True,
-                        show_progress_bar=False,
+                    comprehensive_explanation = local_is_comprehensive_explanation(
+                        user_query.strip()
                     )
-                    chunks = local_db.search_similar_chunks(
-                        query_vector=q_vec,
-                        top_k=top_k,
-                        document_id=selected_doc_id,
-                    )
-                    try:
-                        llm_res = local_llm.generate_rag_answer(
-                            query=user_query.strip(),
-                            retrieved_chunks=chunks,
-                            model=selected_model,
-                            api_key=user_api_key,
-                            temperature=temperature,
+                    if comprehensive_explanation and selected_doc_id is None:
+                        st.error(
+                            "Select one document before asking for a full explanation."
                         )
-                        answer_data = {
-                            "query": user_query.strip(),
-                            "answer": llm_res["answer"],
-                            "model_used": llm_res["model_used"],
-                            "chunks_used": llm_res["chunks_used"],
-                            "sources": chunks,
-                            "citations": llm_res.get("citations", []),
-                            "total_tokens": llm_res.get("total_tokens", 0),
-                        }
-                    except Exception as e:
-                        st.error(f"Generation error: {e}")
+                    else:
+                        # In-process local execution
+                        emb_model = local_get_embedding_model()
+                        q_vec = emb_model.encode(
+                            user_query.strip(),
+                            normalize_embeddings=True,
+                            convert_to_numpy=True,
+                            show_progress_bar=False,
+                        )
+                        selected_document = next(
+                            (
+                                document
+                                for document in documents
+                                if str(document["id"]) == str(selected_doc_id)
+                            ),
+                            None,
+                        )
+                        full_document_k = (
+                            int(selected_document.get("chunk_count", 0))
+                            if comprehensive_explanation and selected_document
+                            else top_k
+                        )
+                        chunks = local_db.search_similar_chunks(
+                            query_vector=q_vec,
+                            top_k=full_document_k,
+                            document_id=selected_doc_id,
+                            min_similarity=-1.0 if comprehensive_explanation else 0.0,
+                        )
+                        if comprehensive_explanation:
+                            chunks.sort(key=lambda chunk: chunk["chunk_index"])
+                        try:
+                            llm_res = local_llm.generate_rag_answer(
+                                query=user_query.strip(),
+                                retrieved_chunks=chunks,
+                                model=selected_model,
+                                api_key=user_api_key,
+                                temperature=temperature,
+                                comprehensive_document=comprehensive_explanation,
+                            )
+                            answer_data = {
+                                "query": user_query.strip(),
+                                "answer": llm_res["answer"],
+                                "model_used": llm_res["model_used"],
+                                "chunks_used": llm_res["chunks_used"],
+                                "sources": chunks,
+                                "citations": llm_res.get("citations", []),
+                                "total_tokens": llm_res.get("total_tokens", 0),
+                            }
+                        except Exception as e:
+                            st.error(f"Generation error: {e}")
 
                 # Display Results
                 if answer_data:

@@ -1,4 +1,5 @@
 from backend.prompts import (
+    COMPREHENSIVE_DOCUMENT_PROMPT,
     build_user_prompt,
     get_prompt_for_intent,
 )
@@ -77,4 +78,85 @@ def test_rag_generator_uses_mode_prompt_and_conversation_context(monkeypatch) ->
     assert "CONVERSATION CONTEXT" in messages[1]["content"]
     assert "RNNs process sequential input" in messages[1]["content"]
     assert result["model_used"]
+    assert result["citations"][0]["page_number"] == 2
+
+
+def test_comprehensive_generation_uses_complete_document_prompt_and_citations(
+    monkeypatch,
+) -> None:
+    calls = []
+
+    def fake_gemini(**kwargs):
+        calls.append(kwargs)
+        return {
+            "choices": [
+                {
+                    "message": {
+                        "content": "The topic is introduced here [EXCERPT 1, p. 2]."
+                    }
+                }
+            ]
+        }
+
+    monkeypatch.setattr(generator, "call_gemini_api", fake_gemini)
+    result = generator.generate_rag_answer(
+        query="Explain the entire PDF",
+        retrieved_chunks=[
+            {
+                "chunk_id": 1,
+                "document_id": "doc-1",
+                "filename": "notes.pdf",
+                "chunk_index": 0,
+                "content": "The topic is introduced here.",
+                "similarity": 0.1,
+                "page_number": 2,
+            }
+        ],
+        api_key="test-key",
+        intent="DOCUMENT_EXPLANATION",
+        comprehensive_document=True,
+    )
+
+    assert COMPREHENSIVE_DOCUMENT_PROMPT in calls[0]["messages"][0]["content"]
+    assert "original order" in calls[0]["messages"][0]["content"]
+    assert "complete, concise outline" in calls[0]["messages"][0]["content"]
+    assert calls[0]["max_tokens"] == 8192
+    assert result["citations"][0]["page_number"] == 2
+
+
+def test_legacy_llm_uses_comprehensive_prompt_and_verified_page_citation(
+    monkeypatch,
+) -> None:
+    from app import llm as legacy_llm
+
+    calls = []
+
+    def fake_gemini(**kwargs):
+        calls.append(kwargs)
+        return {
+            "choices": [
+                {"message": {"content": "The topic starts here [EXCERPT 1, p. 2]."}}
+            ]
+        }
+
+    monkeypatch.setattr(legacy_llm, "call_gemini_api", fake_gemini)
+    result = legacy_llm.generate_rag_answer(
+        query="Explain the entire PDF",
+        retrieved_chunks=[
+            {
+                "chunk_id": 1,
+                "document_id": "doc-1",
+                "filename": "notes.pdf",
+                "chunk_index": 0,
+                "content": "The topic starts here.",
+                "similarity": 0.1,
+                "page_number": 2,
+            }
+        ],
+        api_key="test-key",
+        comprehensive_document=True,
+    )
+
+    assert "complete, concise outline" in calls[0]["messages"][0]["content"]
+    assert calls[0]["max_tokens"] == 8192
     assert result["citations"][0]["page_number"] == 2

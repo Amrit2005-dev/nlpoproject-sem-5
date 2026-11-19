@@ -138,10 +138,23 @@ _GENERAL_RE = re.compile(
 
 # --- Explanation patterns ---
 _EXPLANATION_RE = re.compile(
-    r"\b(explain|explanation|elaborate|samjhao|samjha do|detail mein|"
+    r"\b(explain|explanation|elaborate|teach|samjhao|samjha do|detail mein|"
     r"describe|describe karo|vishleshan)\b",
     re.IGNORECASE,
 )
+
+_COMPREHENSIVE_EXPLANATION_RE = re.compile(
+    r"\b(?:explain|teach|walk\s+me\s+through|go\s+through|cover)\b"
+    r".{0,100}\b(?:all|every|entire|whole|everything|complete|full)\b"
+    r"|\b(?:explain|teach|walk\s+me\s+through|go\s+through|cover)\b"
+    r".{0,60}\b(?:this|the)\s+(?:pdf|document|assignment|syllabus)\b",
+    re.IGNORECASE,
+)
+
+
+def is_comprehensive_explanation_request(text: str) -> bool:
+    """Return whether the user asks for an explanation of the complete document."""
+    return bool(text and _COMPREHENSIVE_EXPLANATION_RE.search(text))
 
 
 def _make_result(

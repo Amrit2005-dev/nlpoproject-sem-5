@@ -10,6 +10,7 @@ from backend.config import (
     UNIQUE_FALLBACK_MODELS,
 )
 from backend.gemini import call_gemini, verify_gemini_api_key
+from backend.prompts import COMPREHENSIVE_DOCUMENT_PROMPT
 
 load_dotenv()
 
@@ -88,7 +89,9 @@ def resolve_citations(
 
     # Match [EXCERPT 1] or [EXCERPT #1]
     matches = re.findall(
-        r"\[(?:EXCERPT|Excerpt|excerpt)\s*#?(\d+)\]", answer
+        r"\[(?:EXCERPT|Excerpt|excerpt)\s*#?(\d+)"
+        r"(?:\s*,\s*(?:page|p\.?)\s*\d+)?\]",
+        answer,
     )
     for m in matches:
         try:
@@ -205,6 +208,7 @@ def generate_rag_answer(
     question_labels: list[str] | None = None,
     required_facets: list[str] | None = None,
     missing_facets: list[str] | None = None,
+    comprehensive_document: bool = False,
 ) -> dict[str, Any]:
     """
     Generate an answer using Gemini with strict document grounding and verified citations.
@@ -220,6 +224,23 @@ def generate_rag_answer(
     labels_text = ", ".join(question_labels or []) or "general"
     facets_text = ", ".join(required_facets or []) or "answer all parts of the question"
     missing_text = ", ".join(missing_facets or []) or "none"
+    answer_instruction = (
+        "Explain every supplied excerpt in original order and cover all document topics."
+        if comprehensive_document
+        else "Answer using only the supplied excerpts and cover every requested facet."
+    )
+    citation_instruction = (
+        "Cite factual claims with the excerpt label and verified page, "
+        "for example [EXCERPT 1, p. 2]."
+        if comprehensive_document
+        else "Whenever a factual claim is supported by an excerpt, cite it using [EXCERPT #]."
+    )
+    supplemental_instruction = (
+        " Clearly label supplemental material as "
+        "'Additional educational explanation (general knowledge)'."
+        if comprehensive_document
+        else ""
+    )
     user_prompt = (
         f"DOCUMENT EXCERPTS:\n"
         f"================================================\n"
@@ -229,15 +250,19 @@ def generate_rag_answer(
         f"INTERNAL QUESTION TYPE (do not echo this label): {labels_text}\n"
         f"INTERNAL REQUIRED FACETS (do not echo these labels): {facets_text}\n"
         f"INTERNAL UNSUPPORTED FACETS (do not echo these labels): {missing_text}\n\n"
-        f"INSTRUCTION: Answer using only the supplied excerpts and cover every requested facet. "
+        f"INSTRUCTION: {answer_instruction} "
         f"Write in the user's language style. For comparisons, cover both items and then the contrast. "
         f"For algorithms, give ordered steps. For numerical questions, state formula, substitution, and result. "
-        f"Do not invent missing facts. Whenever a factual claim is supported by an excerpt, cite it using [EXCERPT #]. "
+        f"Do not invent missing facts. {citation_instruction} "
         f"For unsupported facets, explicitly state that the provided document does not contain sufficient evidence."
+        f"{supplemental_instruction}"
     )
 
     messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
+        {
+            "role": "system",
+            "content": COMPREHENSIVE_DOCUMENT_PROMPT if comprehensive_document else SYSTEM_PROMPT,
+        },
         {"role": "user", "content": user_prompt},
     ]
 
@@ -257,6 +282,7 @@ def generate_rag_answer(
                 model=target_model,
                 api_key=effective_key,
                 temperature=temperature,
+                max_tokens=8192 if comprehensive_document else 1000,
             )
             choices = res_json.get("choices", [])
             if not choices:

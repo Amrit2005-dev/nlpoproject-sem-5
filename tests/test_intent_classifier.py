@@ -1,4 +1,21 @@
-from backend.intent_classifier import detect_explanation_style, rule_classify
+from backend.intent_classifier import (
+    detect_explanation_style,
+    is_comprehensive_explanation_request,
+    rule_classify,
+)
+
+
+def test_comprehensive_explanation_requests_are_detected() -> None:
+    for query in (
+        "Explain all topics in detail",
+        "Explain the entire PDF",
+        "Explain all questions",
+        "Teach me this assignment",
+        "Explain everything step by step",
+    ):
+        assert is_comprehensive_explanation_request(query)
+
+    assert not is_comprehensive_explanation_request("Explain question 2")
 
 
 def test_standalone_short_question_is_not_a_follow_up() -> None:

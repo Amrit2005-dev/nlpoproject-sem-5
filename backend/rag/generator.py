@@ -13,7 +13,11 @@ from backend.config import (
     UNIQUE_FALLBACK_MODELS,
 )
 from backend.gemini import call_gemini, verify_gemini_api_key
-from backend.prompts import build_user_prompt, get_prompt_for_intent
+from backend.prompts import (
+    COMPREHENSIVE_DOCUMENT_PROMPT,
+    build_user_prompt,
+    get_prompt_for_intent,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +93,11 @@ def resolve_citations(
     cited_indices: list[int] = []
 
     # Match [EXCERPT 1] or [EXCERPT #1]
-    matches = re.findall(r"\[(?:EXCERPT|Excerpt|excerpt)\s*#?(\d+)\]", answer)
+    matches = re.findall(
+        r"\[(?:EXCERPT|Excerpt|excerpt)\s*#?(\d+)"
+        r"(?:\s*,\s*(?:page|p\.?)\s*\d+)?\]",
+        answer,
+    )
     for m in matches:
         try:
             val = int(m)
@@ -267,6 +275,7 @@ def generate_rag_answer(
     conversation_context: str | None = None,
     explanation_style: str | None = None,
     is_viva: bool = False,
+    comprehensive_document: bool = False,
 ) -> dict[str, Any]:
     """
     Generate a grounded answer with Gemini and resolve verified citations.
@@ -300,13 +309,22 @@ def generate_rag_answer(
             question_plan=question_plan,
             conversation_context=conversation_context,
             explanation_style=explanation_style,
+            comprehensive_document=comprehensive_document,
         )
-        mode_prompt = get_prompt_for_intent(
-            intent,
-            explanation_style=explanation_style,
-            is_viva=is_viva,
+        mode_prompt = (
+            COMPREHENSIVE_DOCUMENT_PROMPT
+            if comprehensive_document
+            else get_prompt_for_intent(
+                intent,
+                explanation_style=explanation_style,
+                is_viva=is_viva,
+            )
         )
-        system_prompt = f"{mode_prompt}\n\n{SYSTEM_PROMPT}"
+        system_prompt = (
+            mode_prompt
+            if comprehensive_document
+            else f"{mode_prompt}\n\n{SYSTEM_PROMPT}"
+        )
         if language_instruction:
             user_prompt += f"\n\nLANGUAGE: {language_instruction.strip()}"
     else:
@@ -348,6 +366,7 @@ def generate_rag_answer(
                 model=target_model,
                 api_key=effective_key,
                 temperature=temperature,
+                max_tokens=8192 if comprehensive_document else 1000,
             )
             choices = res_json.get("choices", [])
             if not choices:
