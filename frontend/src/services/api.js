@@ -392,12 +392,6 @@ class ApiService {
         timestamp: new Date().toISOString()
       };
       let answer = ragResult.answer || 'I could not find an answer in the selected document.';
-      if (ragResult.citations?.length) {
-        answer += '\n\n**Sources:**';
-        ragResult.citations.forEach((citation, index) => {
-          answer += `\n${index + 1}. ${citation.document_name || 'Document'}${citation.page_number ? ` — page ${citation.page_number}` : ''}`;
-        });
-      }
       const aiMessage = {
         id: 'msg-' + (Date.now() + 1),
         sender: 'assistant',
