@@ -14,6 +14,7 @@ A complete Retrieval-Augmented Generation (RAG) system that extracts text from P
 - **Strictly Grounded LLM Answers**: Queries the OpenRouter API with a strict system prompt instructing the model to answer **only** using facts from the retrieved chunks and to refuse speculation if the information is not in the document.
 - **Source Citations**: Every answer includes the exact document excerpts, chunk indices, and similarity match percentages.
 - **Code-Mixed Indian Language Support**: Detects English, Telugu, Hindi, romanized Telugu/Hindi, and mixed-script input. Answers follow the detected language and casual/formal register.
+- **Context-Aware Query Handling**: Classifies requests by intent, corrects common academic typos, and rewrites conversational follow-ups using recent chat history. Specialized teaching, viva, summary, and extraction prompts retain document grounding and citations.
 - **Interactive Web Interface**: Streamlit UI featuring:
   - 💬 **Ask Your Documents (RAG)**: Conversational Q&A with real-time strictly grounded answers and evidence expanders.
   - ⚡ **One-Click Workspace Indexer**: Automatically detects and indexes local PDF documents.

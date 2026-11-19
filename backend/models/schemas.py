@@ -85,9 +85,18 @@ class SearchRequest(BaseModel):
     min_similarity: float = Field(0.0, ge=-1.0, le=1.0, description="Minimum cosine similarity threshold")
 
 
+class ConversationMessage(BaseModel):
+    sender: str = "user"
+    text: str
+
+
 class RagAskRequest(BaseModel):
     query: str = Field(..., description="Question to answer based on the stored documents")
     document_id: uuid.UUID | None = Field(None, description="Optional document ID to restrict context")
+    conversation_history: list[ConversationMessage] = Field(
+        default_factory=list,
+        description="Recent conversation messages used to resolve follow-up questions",
+    )
     top_k: int = Field(4, ge=1, le=10, description="Number of retrieved chunks used as LLM context")
     model: str | None = Field(None, description="OpenRouter model name (e.g. nvidia/nemotron-3.5-lightning:free)")
     api_key: str | None = Field(None, description="Optional OpenRouter API key override")

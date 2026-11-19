@@ -38,6 +38,16 @@ from backend.config import (
 )
 from backend.study import study_router
 from backend.multilingual import detect_language
+from backend.intent_classifier import (
+    classify_intent,
+    detect_explanation_style,
+    detect_viva_mode,
+)
+from backend.query_rewriter import (
+    build_conversation_context,
+    rewrite_follow_up_query,
+)
+from backend.typo_handler import correct_typos, normalize_query
 from backend.models.schemas import (
     AuthResponse,
     ChatCreateRequest,
@@ -327,6 +337,37 @@ def get_conversational_response(text: str) -> str | None:
     return None
 
 
+def _prepare_query(
+    text: str,
+    has_documents: bool,
+    conversation_history: list[dict[str, Any]],
+    api_key: str | None = None,
+) -> dict[str, Any]:
+    typo_result = correct_typos(text)
+    corrected_query = typo_result["corrected"] or text
+    intent = classify_intent(
+        corrected_query,
+        has_documents=has_documents,
+        conversation_history=conversation_history,
+        api_key=api_key,
+    )
+    rewrite = rewrite_follow_up_query(
+        corrected_query,
+        conversation_history=conversation_history,
+        api_key=api_key,
+    )
+    standalone_query = rewrite["rewritten_query"] or corrected_query
+    return {
+        "query": standalone_query,
+        "retrieval_query": normalize_query(standalone_query) or standalone_query,
+        "intent": intent,
+        "typo_correction": typo_result,
+        "query_rewrite": rewrite,
+        "explanation_style": detect_explanation_style(standalone_query),
+        "is_viva": detect_viva_mode(standalone_query),
+    }
+
+
 @app.post("/api/chats/{chat_id}/messages")
 def send_message(
     chat_id: str,
@@ -343,6 +384,7 @@ def send_message(
                 "updatedAt": datetime.datetime.utcnow().isoformat(), "messages": [], "messageCount": 0, "lastMessage": ""}
         chats.insert(0, chat)
 
+    conversation_history = chat["messages"][-12:]
     user_msg = {
         "id": f"msg-{uuid.uuid4().hex[:8]}",
         "sender": "user",
@@ -352,58 +394,100 @@ def send_message(
     }
     chat["messages"].append(user_msg)
 
-    # Check conversational response first (e.g. 'hy', 'what is date', 'who are you')
+    available_documents = db.list_documents()
+    query_info = _prepare_query(
+        req.text,
+        has_documents=bool(available_documents),
+        conversation_history=conversation_history,
+    )
+    intent = query_info["intent"]["intent"]
+    corrected_query = query_info["query"]
+    downgraded_document_request = str(
+        query_info["intent"].get("sub_type", "")
+    ).startswith("downgraded_from_document_")
+    should_use_documents = bool(available_documents) and (
+        intent.startswith("DOCUMENT_") or intent == "EDUCATIONAL_ASSISTANCE"
+    )
+
     ai_text = ""
     citations: list[dict] = []
     sources: list[dict] = []
 
-    conv = get_conversational_response(req.text)
+    conv = get_conversational_response(corrected_query)
     if conv:
         ai_text = conv
-    else:
+    elif downgraded_document_request:
+        ai_text = "The provided document does not contain this information."
+    elif should_use_documents:
         try:
-            if db.list_documents():
-                query_embedding = generate_query_embedding(req.text)
-                chunks = db.search_similar_chunks(
-                    query_vector=query_embedding, top_k=4, min_similarity=0.0
-                )
-                best_similarity = max(
-                    (float(chunk.get("similarity", 0.0)) for chunk in chunks),
-                    default=-1.0,
-                )
-                if chunks and best_similarity >= 0.20:
-                    result = generate_rag_answer(
-                        query=req.text,
-                        retrieved_chunks=chunks,
-                        language_info=language_info,
-                    )
-                    ai_text = result.get("answer", "")
-                    citations = result.get("citations", [])
-                    sources = [
-                        {
-                            "filename": c.get("filename", ""),
-                            "page_number": c.get("page_number", 1),
-                            "section_title": c.get("section_title"),
-                            "similarity": c.get("similarity", 0.0),
-                        }
-                        for c in chunks
-                    ]
+            query_embedding = generate_query_embedding(query_info["retrieval_query"])
+            chunks = db.search_similar_chunks(
+                query_vector=query_embedding, top_k=4, min_similarity=0.0
+            )
         except Exception as exc:
-            logger.warning("Document retrieval failed; trying general chat: %s", exc)
+            logger.exception("Document retrieval failed")
+            raise HTTPException(
+                status_code=502,
+                detail="Document search failed. Please try again.",
+            ) from exc
 
-        if not ai_text:
+        best_similarity = max(
+            (float(chunk.get("similarity", 0.0)) for chunk in chunks),
+            default=-1.0,
+        )
+        if chunks and best_similarity >= 0.20:
             try:
-                result = generate_chat_answer(chat["messages"], language_info=language_info)
-                ai_text = result["answer"]
+                result = generate_rag_answer(
+                    query=corrected_query,
+                    retrieved_chunks=chunks,
+                    language_info=language_info,
+                    intent=intent,
+                    conversation_context=(
+                        build_conversation_context(conversation_history)
+                        if intent == "DOCUMENT_FOLLOW_UP"
+                        else None
+                    ),
+                    explanation_style=query_info["explanation_style"],
+                    is_viva=query_info["is_viva"],
+                )
             except Exception as exc:
-                logger.exception("General chat response failed")
+                logger.exception("Document answer generation failed")
                 raise HTTPException(
                     status_code=502,
-                    detail="I couldn't generate a reply right now. Please try again.",
+                    detail="I couldn't generate a document-grounded reply right now. Please try again.",
                 ) from exc
+            ai_text = result.get("answer", "")
+            citations = result.get("citations", [])
+            sources = [
+                {
+                    "filename": c.get("filename", ""),
+                    "page_number": c.get("page_number", 1),
+                    "section_title": c.get("section_title"),
+                    "similarity": c.get("similarity", 0.0),
+                }
+                for c in chunks
+            ]
+        else:
+            ai_text = "The provided document does not contain this information."
+    else:
+        try:
+            result = generate_chat_answer(
+                chat["messages"],
+                language_info=language_info,
+            )
+            ai_text = result["answer"]
+        except Exception as exc:
+            logger.exception("General chat response failed")
+            raise HTTPException(
+                status_code=502,
+                detail="I couldn't generate a reply right now. Please try again.",
+            ) from exc
 
     if not ai_text:
-        ai_text = "I couldn't generate a reply right now. Please try again."
+        raise HTTPException(
+            status_code=502,
+            detail="I couldn't generate a reply right now. Please try again.",
+        )
 
     ai_msg = {
         "id": f"msg-{uuid.uuid4().hex[:8]}",
@@ -413,6 +497,11 @@ def send_message(
         "citations": citations,
         "sources": sources,
         "language": language_info,
+        "intent": query_info["intent"],
+        "query_processing": {
+            "typo_correction": query_info["typo_correction"],
+            "query_rewrite": query_info["query_rewrite"],
+        },
     }
     chat["messages"].append(ai_msg)
     chat["messageCount"] = len(chat["messages"])
@@ -694,9 +783,21 @@ def ask_question(req: RagAskRequest) -> RagAskResponse:
     if not query:
         raise HTTPException(status_code=422, detail="Question cannot be empty.")
     language_info = detect_language(query, req.language_override)
+    conversation_history = [
+        message.model_dump()
+        for message in req.conversation_history[-12:]
+    ]
+    available_documents = db.list_documents()
+    query_info = _prepare_query(
+        query,
+        has_documents=bool(available_documents),
+        conversation_history=conversation_history,
+        api_key=req.api_key,
+    )
+    intent = query_info["intent"]["intent"]
+    corrected_query = query_info["query"]
 
-    # Check for normal conversational question (e.g. 'hy', 'what is date', 'who are you')
-    conv = get_conversational_response(query)
+    conv = get_conversational_response(corrected_query)
     if conv:
         return RagAskResponse(
             query=query,
@@ -706,9 +807,56 @@ def ask_question(req: RagAskRequest) -> RagAskResponse:
             sources=[],
             citations=[],
             language_detection=language_info,
+            question_plan={"intent": query_info["intent"]},
         )
 
-    question_plan = plan_retrieval(query)
+    downgraded_document_request = str(
+        query_info["intent"].get("sub_type", "")
+    ).startswith("downgraded_from_document_")
+    if intent == "NORMAL_CONVERSATION" or (
+        intent == "GENERAL_KNOWLEDGE" and not downgraded_document_request
+    ):
+        try:
+            chat_history = [
+                *conversation_history,
+                {"sender": "user", "text": corrected_query},
+            ]
+            result = generate_chat_answer(
+                chat_history,
+                model=req.model,
+                api_key=req.api_key,
+                language_info=language_info,
+            )
+        except Exception as exc:
+            logger.exception("General answer generation failed")
+            raise HTTPException(
+                status_code=502,
+                detail="I couldn't generate a reply right now. Please try again.",
+            ) from exc
+        return RagAskResponse(
+            query=query,
+            answer=result["answer"],
+            model_used=result["model_used"],
+            chunks_used=0,
+            sources=[],
+            citations=[],
+            language_detection=language_info,
+            question_plan={"intent": query_info["intent"]},
+        )
+
+    if not available_documents or downgraded_document_request:
+        return RagAskResponse(
+            query=query,
+            answer="The provided document does not contain this information.",
+            model_used="none",
+            chunks_used=0,
+            sources=[],
+            citations=[],
+            language_detection=language_info,
+            question_plan={"intent": query_info["intent"]},
+        )
+
+    question_plan = plan_retrieval(query_info["retrieval_query"])
     query_embeddings = generate_embeddings(question_plan.queries)
     retrieval_sets = [
         db.search_similar_chunks(
@@ -723,7 +871,9 @@ def ask_question(req: RagAskRequest) -> RagAskResponse:
     evidence_check = check_required_facets(question_plan.required_facets, matching_chunks)
     retry_queries: list[str] = []
     if evidence_check["missing"]:
-        retry_queries = make_missing_facet_queries(query, evidence_check["missing"])
+        retry_queries = make_missing_facet_queries(
+            query_info["retrieval_query"], evidence_check["missing"]
+        )
         if retry_queries:
             retry_embeddings = generate_embeddings(retry_queries)
             retry_sets = [db.search_similar_chunks(
@@ -735,6 +885,9 @@ def ask_question(req: RagAskRequest) -> RagAskResponse:
     question_metadata = question_plan.to_dict()
     question_metadata["evidence_check"] = evidence_check
     question_metadata["retry_queries"] = retry_queries
+    question_metadata["intent"] = query_info["intent"]
+    question_metadata["typo_correction"] = query_info["typo_correction"]
+    question_metadata["query_rewrite"] = query_info["query_rewrite"]
 
     best_similarity = max((float(chunk.get("similarity", 0.0)) for chunk in matching_chunks), default=-1.0)
     if not matching_chunks or best_similarity < 0.20:
@@ -747,12 +900,20 @@ def ask_question(req: RagAskRequest) -> RagAskResponse:
 
     try:
         llm_result = generate_rag_answer(
-            query=query, retrieved_chunks=matching_chunks,
+            query=corrected_query, retrieved_chunks=matching_chunks,
             model=req.model, api_key=req.api_key, temperature=req.temperature,
             question_labels=question_plan.labels,
             required_facets=question_plan.required_facets,
             missing_facets=evidence_check["missing"],
             language_info=language_info,
+            intent=intent,
+            conversation_context=(
+                build_conversation_context(conversation_history)
+                if intent == "DOCUMENT_FOLLOW_UP"
+                else None
+            ),
+            explanation_style=query_info["explanation_style"],
+            is_viva=query_info["is_viva"],
         )
     except Exception as exc:
         logger.error("LLM generation failed: %s", exc)

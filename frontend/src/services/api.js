@@ -382,9 +382,9 @@ class ApiService {
     }
   }
 
-  async sendMessage(id, text, documentId = null) {
+  async sendMessage(id, text, documentId = null, conversationHistory = []) {
     if (documentId) {
-      const ragResult = await this.ragAsk(text, { documentId });
+      const ragResult = await this.ragAsk(text, { documentId, conversationHistory });
       const userMessage = {
         id: 'msg-' + Date.now(),
         sender: 'user',
@@ -585,12 +585,13 @@ class ApiService {
   }
 
   /** Ask a question using RAG (retrieval + LLM grounding + citations). */
-  async ragAsk(query, { documentId = null, topK = 4, model = null, apiKey = null, temperature = 0.1, languageOverride = null } = {}) {
+  async ragAsk(query, { documentId = null, conversationHistory = [], topK = 4, model = null, apiKey = null, temperature = 0.1, languageOverride = null } = {}) {
     return this.request('/rag/ask', {
       method: 'POST',
       body: JSON.stringify({
         query,
         document_id: documentId,
+        conversation_history: conversationHistory,
         top_k: topK,
         model,
         api_key: apiKey,

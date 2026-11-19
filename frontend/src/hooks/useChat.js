@@ -153,7 +153,12 @@ export function ChatProvider({ children }) {
       }));
 
       // Call API
-      const result = await api.sendMessage(chatId, text, documentId);
+      const result = await api.sendMessage(
+        chatId,
+        text,
+        documentId,
+        currentChat?.messages?.slice(-12) || []
+      );
       if (documentId && result?.userMessage && result?.aiMessage) {
         setCurrentChat(prev => ({
           ...(result.chat || prev || {}),
