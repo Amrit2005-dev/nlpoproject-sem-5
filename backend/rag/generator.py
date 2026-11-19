@@ -209,6 +209,67 @@ def call_openrouter(
     return response.json()
 
 
+def generate_chat_answer(
+    conversation: list[dict[str, Any]],
+    model: str | None = None,
+    api_key: str | None = None,
+    language_info: dict[str, Any] | None = None,
+) -> dict[str, str]:
+    """Generate an ordinary conversational answer using recent chat history."""
+    effective_key = (api_key or OPENROUTER_API_KEY).strip()
+    if not effective_key:
+        raise ValueError("General chat requires an OpenRouter API key configured on the backend.")
+
+    language_instruction = ""
+    if language_info:
+        language_instruction = (
+            "\nReply in "
+            f"{language_info.get('label', 'the user language')} "
+            f"with a {language_info.get('register', 'casual')} tone."
+        )
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are a friendly, helpful AI assistant. Answer general questions naturally and "
+                "concisely, follow the user's language and tone, and ask a clarifying question when "
+                "needed. Do not claim that you read or know the contents of uploaded documents unless "
+                "their contents are provided in the conversation." + language_instruction
+            ),
+        }
+    ]
+    for item in conversation[-12:]:
+        role = "assistant" if item.get("sender") == "assistant" else "user"
+        content = item.get("text")
+        if isinstance(content, str) and content.strip():
+            messages.append({"role": role, "content": content.strip()})
+
+    candidate_models = [model] if model else []
+    candidate_models.extend(m for m in UNIQUE_FALLBACK_MODELS if m not in candidate_models)
+    last_error: Exception | None = None
+
+    for target_model in candidate_models:
+        try:
+            response = call_openrouter(
+                messages=messages,
+                model=target_model,
+                api_key=effective_key,
+                temperature=0.7,
+            )
+            choices = response.get("choices", [])
+            content = _clean_user_answer(
+                choices[0].get("message", {}).get("content") if choices else None
+            )
+            if content:
+                return {"answer": content, "model_used": target_model}
+            last_error = RuntimeError(f"Model {target_model} returned an empty answer.")
+        except Exception as exc:
+            logger.warning("Chat model %s failed: %s. Trying next candidate...", target_model, exc)
+            last_error = exc
+
+    raise RuntimeError(f"All chat models failed. Last error: {last_error}")
+
+
 def generate_rag_answer(
     query: str,
     retrieved_chunks: list[dict[str, Any]],
@@ -218,6 +279,7 @@ def generate_rag_answer(
     question_labels: list[str] | None = None,
     required_facets: list[str] | None = None,
     missing_facets: list[str] | None = None,
+    language_info: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """
     Generate an answer using OpenRouter with strict document grounding and verified citations.
@@ -234,6 +296,12 @@ def generate_rag_answer(
     labels_text = ", ".join(question_labels or []) or "general"
     facets_text = ", ".join(required_facets or []) or "answer all parts of the question"
     missing_text = ", ".join(missing_facets or []) or "none"
+    language_instruction = ""
+    if language_info:
+        language_instruction = (
+            f"Reply in {language_info.get('label', 'the user language')} "
+            f"with a {language_info.get('register', 'casual')} tone. "
+        )
     user_prompt = (
         f"DOCUMENT EXCERPTS:\n"
         f"================================================\n"
@@ -243,7 +311,7 @@ def generate_rag_answer(
         f"INTERNAL QUESTION TYPE (do not echo this label): {labels_text}\n"
         f"INTERNAL REQUIRED FACETS (do not echo these labels): {facets_text}\n"
         f"INTERNAL UNSUPPORTED FACETS (do not echo these labels): {missing_text}\n\n"
-        f"INSTRUCTION: Answer using only the supplied excerpts and cover every requested facet. "
+        f"INSTRUCTION: {language_instruction}Answer using only the supplied excerpts and cover every requested facet. "
         f"Write in the user's language style. For comparisons, cover both items and then the contrast. "
         f"For algorithms, give ordered steps. For numerical questions, state formula, substitution, and result. "
         f"Do not invent missing facts. Whenever a factual claim is supported by an excerpt, cite it using [EXCERPT #]. "

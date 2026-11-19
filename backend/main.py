@@ -11,6 +11,7 @@ import hmac
 import json
 import logging
 import os
+import re
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -36,6 +37,7 @@ from backend.config import (
     VECTOR_DIMENSIONS,
 )
 from backend.study import study_router
+from backend.multilingual import detect_language
 from backend.models.schemas import (
     AuthResponse,
     ChatCreateRequest,
@@ -60,6 +62,7 @@ from backend.rag import (
     extract_document_pages,
     generate_embeddings,
     generate_query_embedding,
+    generate_chat_answer,
     generate_rag_answer,
     verify_api_key,
     plan_retrieval,
@@ -273,13 +276,65 @@ def delete_chat(chat_id: str, user_id: Annotated[str, Depends(require_user)]) ->
     return {"message": "Chat deleted"}
 
 
+def get_conversational_response(text: str) -> str | None:
+    if not isinstance(text, str) or not text.strip():
+        return "Please type a question or a message, and I'll help you."
+
+    t = text.strip().lower()
+    t_clean = re.sub(r"[^\w\s]", "", t).strip()
+
+    # Greetings
+    greetings = {"hi", "hii", "hiii", "hy", "hello", "hey", "hola", "namaste", "good morning", "good afternoon", "good evening", "good night", "sup", "yo"}
+    if t_clean in greetings or any(t_clean.startswith(g + " ") for g in ["hi", "hii", "hiii", "hy", "hello", "hey", "hola", "namaste", "good morning", "good afternoon", "good evening"]):
+        return "Hello! 👋 How can I help you today? You can ask me questions about your uploaded documents, study syllabus, or assignments."
+
+    # Date / Time
+    date_patterns = [
+        "what is date", "what is today date", "what is the date", "whats the date",
+        "what date is today", "what date is it", "todays date", "today date",
+        "current date", "what is todays date", "date today", "tell me the date",
+        "tell me date", "aaj ki date", "tarikh",
+    ]
+    if any(p in t_clean for p in date_patterns) or t_clean in {"date", "todays date"}:
+        now = datetime.datetime.now()
+        return f"📅 Today's date is **{now.strftime('%A, %d %B %Y')}**."
+
+    time_patterns = ["what is time", "what is current time", "whats the time", "what is the time", "current time", "what time is it", "tell me the time", "time now", "samay", "waqt"]
+    if any(p in t_clean for p in time_patterns) or t_clean in {"time", "current time"}:
+        now = datetime.datetime.now()
+        return f"⏰ The current time is **{now.strftime('%I:%M %p')}**."
+
+    # Identity / Capabilities
+    if t_clean in {"who are you", "what are you", "what can you do", "help", "who r u"}:
+        return (
+            "I am your **AI Study & Document Assistant**. Here is what I can do:\n\n"
+            "• 📚 **Document Q&A**: Ask any question grounded strictly in your PDFs with page citations.\n"
+            "• 🎓 **Exam & Syllabus Planner**: Organize subjects and track lesson-by-lesson progress.\n"
+            "• 🔍 **Study-Readiness Auditor**: Check if your notes cover your syllabus topics.\n"
+            "• 📝 **Interactive Quizzes**: Generate and test yourself on your course material."
+        )
+
+    if t_clean in {"how are you", "how r u", "how you doing", "whats up", "what is up"}:
+        return "I'm doing well, thank you! How can I help you today?"
+
+    if t_clean in {"bye", "goodbye", "see you", "see ya"}:
+        return "Goodbye! 👋 Come back anytime when you need help."
+
+    # Courtesy
+    if t_clean in {"thank you", "thankyou", "thanks", "thanks a lot", "dhanyawad", "shukriya", "ty"}:
+        return "You're very welcome! 😊 Feel free to ask if you need help with anything else."
+
+    return None
+
+
 @app.post("/api/chats/{chat_id}/messages")
 def send_message(
     chat_id: str,
     req: ChatMessageRequest,
     user_id: Annotated[str, Depends(require_user)],
 ) -> dict:
-    """Send a message in a chat. Attempts RAG answer if documents are indexed."""
+    """Answer general messages conversationally and ground document questions in retrieved chunks."""
+    language_info = detect_language(req.text, req.language_override)
     chats = _CHATS.setdefault(user_id, [])
     chat = next((c for c in chats if c["id"] == chat_id), None)
     if not chat:
@@ -293,31 +348,62 @@ def send_message(
         "sender": "user",
         "text": req.text,
         "timestamp": datetime.datetime.utcnow().isoformat(),
+        "language": language_info,
     }
     chat["messages"].append(user_msg)
 
-    # Try RAG answer
+    # Check conversational response first (e.g. 'hy', 'what is date', 'who are you')
     ai_text = ""
     citations: list[dict] = []
     sources: list[dict] = []
-    try:
-        query_embedding = generate_query_embedding(req.text)
-        chunks = db.search_similar_chunks(query_vector=query_embedding, top_k=4, min_similarity=0.0)
-        if chunks:
-            result = generate_rag_answer(query=req.text, retrieved_chunks=chunks)
-            ai_text = result.get("answer", "")
-            citations = result.get("citations", [])
-            sources = [{"filename": c.get("filename", ""), "page_number": c.get("page_number", 1),
-                        "section_title": c.get("section_title"), "similarity": c.get("similarity", 0.0)}
-                       for c in chunks]
-    except Exception as exc:
-        logger.warning("RAG answer failed, returning fallback: %s", exc)
+
+    conv = get_conversational_response(req.text)
+    if conv:
+        ai_text = conv
+    else:
+        try:
+            if db.list_documents():
+                query_embedding = generate_query_embedding(req.text)
+                chunks = db.search_similar_chunks(
+                    query_vector=query_embedding, top_k=4, min_similarity=0.0
+                )
+                best_similarity = max(
+                    (float(chunk.get("similarity", 0.0)) for chunk in chunks),
+                    default=-1.0,
+                )
+                if chunks and best_similarity >= 0.20:
+                    result = generate_rag_answer(
+                        query=req.text,
+                        retrieved_chunks=chunks,
+                        language_info=language_info,
+                    )
+                    ai_text = result.get("answer", "")
+                    citations = result.get("citations", [])
+                    sources = [
+                        {
+                            "filename": c.get("filename", ""),
+                            "page_number": c.get("page_number", 1),
+                            "section_title": c.get("section_title"),
+                            "similarity": c.get("similarity", 0.0),
+                        }
+                        for c in chunks
+                    ]
+        except Exception as exc:
+            logger.warning("Document retrieval failed; trying general chat: %s", exc)
+
+        if not ai_text:
+            try:
+                result = generate_chat_answer(chat["messages"], language_info=language_info)
+                ai_text = result["answer"]
+            except Exception as exc:
+                logger.exception("General chat response failed")
+                raise HTTPException(
+                    status_code=502,
+                    detail="I couldn't generate a reply right now. Please try again.",
+                ) from exc
 
     if not ai_text:
-        ai_text = (
-            "No documents are indexed yet, or the RAG system is not configured. "
-            "Please upload a document using the Documents tab and ensure your OpenRouter API key is set."
-        )
+        ai_text = "I couldn't generate a reply right now. Please try again."
 
     ai_msg = {
         "id": f"msg-{uuid.uuid4().hex[:8]}",
@@ -326,6 +412,7 @@ def send_message(
         "timestamp": datetime.datetime.utcnow().isoformat(),
         "citations": citations,
         "sources": sources,
+        "language": language_info,
     }
     chat["messages"].append(ai_msg)
     chat["messageCount"] = len(chat["messages"])
@@ -606,6 +693,20 @@ def ask_question(req: RagAskRequest) -> RagAskResponse:
     query = req.query.strip()
     if not query:
         raise HTTPException(status_code=422, detail="Question cannot be empty.")
+    language_info = detect_language(query, req.language_override)
+
+    # Check for normal conversational question (e.g. 'hy', 'what is date', 'who are you')
+    conv = get_conversational_response(query)
+    if conv:
+        return RagAskResponse(
+            query=query,
+            answer=conv,
+            model_used="assistant",
+            chunks_used=0,
+            sources=[],
+            citations=[],
+            language_detection=language_info,
+        )
 
     question_plan = plan_retrieval(query)
     query_embeddings = generate_embeddings(question_plan.queries)
@@ -641,6 +742,7 @@ def ask_question(req: RagAskRequest) -> RagAskResponse:
             query=query, answer="The provided document does not contain this information.",
             model_used="none", chunks_used=0, sources=[], citations=[],
             question_plan=question_metadata,
+            language_detection=language_info,
         )
 
     try:
@@ -650,6 +752,7 @@ def ask_question(req: RagAskRequest) -> RagAskResponse:
             question_labels=question_plan.labels,
             required_facets=question_plan.required_facets,
             missing_facets=evidence_check["missing"],
+            language_info=language_info,
         )
     except Exception as exc:
         logger.error("LLM generation failed: %s", exc)
@@ -675,6 +778,7 @@ def ask_question(req: RagAskRequest) -> RagAskResponse:
         completion_tokens=llm_result.get("completion_tokens", 0),
         total_tokens=llm_result.get("total_tokens", 0),
         question_plan=question_metadata,
+        language_detection=language_info,
     )
 
 

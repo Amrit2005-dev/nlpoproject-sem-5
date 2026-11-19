@@ -13,6 +13,7 @@ A complete Retrieval-Augmented Generation (RAG) system that extracts text from P
   - **PostgreSQL + pgvector**: Persists vectors in PostgreSQL with the `pgvector` extension when Docker Compose is running.
 - **Strictly Grounded LLM Answers**: Queries the OpenRouter API with a strict system prompt instructing the model to answer **only** using facts from the retrieved chunks and to refuse speculation if the information is not in the document.
 - **Source Citations**: Every answer includes the exact document excerpts, chunk indices, and similarity match percentages.
+- **Code-Mixed Indian Language Support**: Detects English, Telugu, Hindi, romanized Telugu/Hindi, and mixed-script input. Answers follow the detected language and casual/formal register.
 - **Interactive Web Interface**: Streamlit UI featuring:
   - 💬 **Ask Your Documents (RAG)**: Conversational Q&A with real-time strictly grounded answers and evidence expanders.
   - ⚡ **One-Click Workspace Indexer**: Automatically detects and indexes local PDF documents.

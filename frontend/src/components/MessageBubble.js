@@ -145,6 +145,21 @@ export default function MessageBubble({ message, isAssistant, userAvatar }) {
           alignItems: isAssistant ? 'flex-start' : 'flex-end'
         }}
       >
+        {isAssistant && message?.language?.label && (
+          <div
+            title={`Detected by ${message.language.method || 'language detection'}`}
+            style={{
+              marginBottom: '5px',
+              fontSize: '10.5px',
+              color: 'var(--text-subtle)',
+              padding: '2px 7px',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: '999px'
+            }}
+          >
+            {message.language.label}
+          </div>
+        )}
         <div
           style={{
             padding: '12px 16px',

@@ -328,21 +328,39 @@ def explain_lesson(
 
     context_text = format_context_for_prompt(retrieved_chunks)
 
-    prompt = f"""You are a clear, efficient tutor using retrieval-augmented generation. Teach "{lesson_title}" using the most relevant supplied PDF excerpts.
-Write about {target_words} words. Prioritize a correct, useful explanation over length. Explain only the material supported by the excerpts and avoid repeating points.
+    prompt = f"""You are an expert NLP professor and curriculum specialist. Structure your explanation of "{lesson_title}" using this comprehensive, viva-ready format:
+
+# {lesson_title}
+
+### 1. Objective of the Assignment / Lesson
+State the primary goal and what practical competencies the student develops.
+
+### 2. Dataset & Preprocessing Pipeline
+Describe dataset requirements, vocabulary size, sequence lengths, and preprocessing steps (tokenization, integer sequences, padding/truncation).
+
+### 3. Model Architecture & Configuration
+Provide a clear Markdown table of layers, purposes, and hyperparameters (embedding dimension, hidden units, optimizer, loss function, epochs).
+
+### 4. Comparative Architecture Breakdown
+Compare the relevant architectures (e.g., Simple RNN vs LSTM vs GRU, or baseline vs advanced models) highlighting gates, long-distance dependencies, and vanishing gradient trade-offs.
+
+### 5. Model Evaluation & Performance Metrics
+Outline evaluation metrics (Accuracy, Precision, Recall, F1-Score, Confusion Matrix) and prediction sampling.
+
+### 6. Error Analysis & Limitations
+Break down error categories (e.g., Negation, Long-distance dependencies, Sarcasm, Ambiguity, Truncation).
+
+### 7. Important Viva Questions (Q&A Table)
+Provide a 10-12 row Markdown table with high-yield Viva questions and crisp, accurate answers.
+
+### 8. Final Conclusion & Viva Recommendations
+Summarize key takeaways and specific topics to focus on for oral exams and assessments.
 
 DOCUMENT CONTEXT:
 {context_text}
 
-Use these concise sections:
-## In simple terms
-## Key ideas and definitions
-## Step-by-step explanation
-## Worked example
-## Common mistake
-## Quick recap
-
-Include one relevant, easy-to-follow worked example. Label it "Illustrative example" if it is not explicitly from the PDF. Cite supported PDF facts inline as (PDF, p. N), using only page numbers shown in the excerpts. Never invent PDF facts or citations. If the excerpts do not contain enough information, say so plainly and explain only what they support.
+GROUNDING RULES:
+Cite supported PDF facts inline as [Page N]. Never invent facts or citations. Ensure mathematical and architectural precision.
 """
     for model in UNIQUE_FALLBACK_MODELS[:2]:
         try:

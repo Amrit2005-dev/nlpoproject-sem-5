@@ -92,6 +92,7 @@ class RagAskRequest(BaseModel):
     model: str | None = Field(None, description="OpenRouter model name (e.g. nvidia/nemotron-3.5-lightning:free)")
     api_key: str | None = Field(None, description="Optional OpenRouter API key override")
     temperature: float = Field(0.1, ge=0.0, le=1.0, description="Sampling temperature")
+    language_override: str | None = Field(None, description="Optional language mode override")
 
 
 class RagAskResponse(BaseModel):
@@ -105,6 +106,7 @@ class RagAskResponse(BaseModel):
     completion_tokens: int = 0
     total_tokens: int = 0
     question_plan: dict[str, Any] | None = None
+    language_detection: dict[str, Any] | None = None
 
 
 # ==========================================
@@ -145,6 +147,7 @@ class ChatRenameRequest(BaseModel):
 
 class ChatMessageRequest(BaseModel):
     text: str
+    language_override: str | None = None
 
 
 class TaskCreateRequest(BaseModel):

@@ -22,6 +22,7 @@ from backend.rag.generator import (
     format_context_for_prompt,
     resolve_citations,
     call_openrouter,
+    generate_chat_answer,
     generate_rag_answer,
     verify_api_key,
 )
@@ -49,6 +50,7 @@ __all__ = [
     "format_context_for_prompt",
     "resolve_citations",
     "call_openrouter",
+    "generate_chat_answer",
     "generate_rag_answer",
     "verify_api_key",
     "plan_retrieval",

@@ -74,8 +74,66 @@ const DEMO_FILES = [
   }
 ];
 
+// Helper for normal conversational queries (e.g. 'hy', 'what is date', 'who are you')
+function getConversationalResponse(text) {
+  if (!text || !text.trim()) {
+    return "Please type a question or a message, and I'll help you.";
+  }
+  const t = text.trim().toLowerCase();
+  const clean = t.replace(/[^\w\s]/g, '').trim();
+
+  // Greetings
+  const greetings = ['hi', 'hii', 'hiii', 'hy', 'hello', 'hey', 'hola', 'namaste', 'good morning', 'good afternoon', 'good evening', 'good night', 'sup', 'yo'];
+  if (greetings.includes(clean) || ['hi ', 'hii ', 'hiii ', 'hy ', 'hello ', 'hey ', 'hola ', 'namaste ', 'good morning ', 'good afternoon ', 'good evening '].some(g => clean.startsWith(g))) {
+    return 'Hello! 👋 How can I help you today? You can ask me questions about your uploaded documents, study syllabus, or assignments.';
+  }
+
+  // Date
+  const datePatterns = ['what is date', 'what is today date', 'what is the date', 'whats the date', 'what date is today', 'what date is it', 'todays date', 'today date', 'current date', 'what is todays date', 'date today', 'tell me the date', 'tell me date', 'aaj ki date', 'tarikh'];
+  if (datePatterns.some(p => clean.includes(p)) || clean === 'date') {
+    const now = new Date();
+    const formatted = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    return `📅 Today's date is **${formatted}**.`;
+  }
+
+  // Time
+  const timePatterns = ['what is time', 'what is current time', 'whats the time', 'what is the time', 'current time', 'what time is it', 'tell me the time', 'time now'];
+  if (timePatterns.some(p => clean.includes(p)) || clean === 'time') {
+    const now = new Date();
+    const formatted = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return `⏰ The current time is **${formatted}**.`;
+  }
+
+  // Identity / Help
+  if (['who are you', 'what are you', 'what can you do', 'help', 'who r u'].includes(clean)) {
+    return `I am your **AI Study & Document Assistant**. Here is what I can do:
+• 📚 **Document Q&A**: Ask any question grounded strictly in your PDFs with page citations.
+• 🎓 **Exam & Syllabus Planner**: Organize subjects and track lesson-by-lesson progress.
+• 🔍 **Study-Readiness Auditor**: Check if your notes cover your syllabus topics.
+• 📝 **Interactive Quizzes**: Generate and test yourself on your course material.`;
+  }
+
+  if (['how are you', 'how r u', 'how you doing', 'whats up', 'what is up'].includes(clean)) {
+    return "I'm doing well, thank you! How can I help you today?";
+  }
+
+  if (['bye', 'goodbye', 'see you', 'see ya'].includes(clean)) {
+    return "Goodbye! 👋 Come back anytime when you need help.";
+  }
+
+  // Courtesy
+  if (['thank you', 'thankyou', 'thanks', 'thanks a lot', 'dhanyawad', 'shukriya', 'ty'].includes(clean)) {
+    return "You're very welcome! 😊 Feel free to ask if you need help with anything else.";
+  }
+
+  return null;
+}
+
 // Helper to simulate smart local assistant if backend is unreachable
 function generateLocalAiResponse(userMessage) {
+  const conv = getConversationalResponse(userMessage);
+  if (conv) return conv;
+
   const query = userMessage.toLowerCase().trim();
 
   if (query.includes('summarize') && (query.includes('meeting') || query.includes('meet up') || query.includes('ux'))) {
@@ -170,7 +228,13 @@ class ApiService {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.message || `Request failed with status ${res.status}`);
+        const apiError = errorData.detail ?? errorData.message;
+        const message = typeof apiError === 'string'
+          ? apiError
+          : apiError
+            ? JSON.stringify(apiError)
+            : `Request failed with status ${res.status}`;
+        throw new Error(message);
       }
 
       return await res.json();
@@ -521,7 +585,7 @@ class ApiService {
   }
 
   /** Ask a question using RAG (retrieval + LLM grounding + citations). */
-  async ragAsk(query, { documentId = null, topK = 4, model = null, apiKey = null, temperature = 0.1 } = {}) {
+  async ragAsk(query, { documentId = null, topK = 4, model = null, apiKey = null, temperature = 0.1, languageOverride = null } = {}) {
     return this.request('/rag/ask', {
       method: 'POST',
       body: JSON.stringify({
@@ -531,6 +595,7 @@ class ApiService {
         model,
         api_key: apiKey,
         temperature,
+        language_override: languageOverride,
       }),
     });
   }
