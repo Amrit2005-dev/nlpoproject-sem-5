@@ -9,8 +9,8 @@ import logging
 import re
 from typing import Any
 
-from backend.config import OPENROUTER_API_KEY, UNIQUE_FALLBACK_MODELS
-from backend.rag.generator import call_openrouter
+from backend.config import GEMINI_API_KEY, UNIQUE_FALLBACK_MODELS
+from backend.rag.generator import call_gemini_api
 
 logger = logging.getLogger(__name__)
 
@@ -285,7 +285,7 @@ def _llm_rewrite(
     for model in UNIQUE_FALLBACK_MODELS:
         try:
             logger.info("Query rewrite: trying model %s", model)
-            response = call_openrouter(
+            response = call_gemini_api(
                 messages=messages,
                 model=model,
                 api_key=api_key,
@@ -330,7 +330,7 @@ def rewrite_follow_up_query(
     conversation_history:
         List of message dicts with ``sender`` and ``text`` keys.
     api_key:
-        Optional OpenRouter API key override.
+        Optional Gemini API key override.
 
     Returns
     -------
@@ -382,7 +382,7 @@ def rewrite_follow_up_query(
         }
 
     # ------- LLM-based fallback ------- #
-    effective_key = (api_key or OPENROUTER_API_KEY or "").strip()
+    effective_key = (api_key or GEMINI_API_KEY or "").strip()
     if not effective_key:
         logger.warning("No API key available for LLM rewrite; returning original query.")
         return {

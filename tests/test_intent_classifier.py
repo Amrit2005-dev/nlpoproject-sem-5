@@ -21,8 +21,10 @@ def test_referential_short_question_is_a_follow_up() -> None:
 
 def test_failed_classifier_prefers_document_question_when_docs_exist(monkeypatch) -> None:
     from backend import intent_classifier
+    from backend import config
 
-    monkeypatch.setattr(intent_classifier, "OPENROUTER_API_KEY", "")
+    monkeypatch.setattr(config, "GEMINI_API_KEY", "")
+    monkeypatch.setattr(intent_classifier, "GEMINI_API_KEY", "")
     result = intent_classifier.llm_classify("Explain an unfamiliar topic", True)
 
     assert result["intent"] == "DOCUMENT_QUESTION"

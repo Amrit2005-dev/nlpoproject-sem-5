@@ -98,8 +98,8 @@ class RagAskRequest(BaseModel):
         description="Recent conversation messages used to resolve follow-up questions",
     )
     top_k: int = Field(4, ge=1, le=10, description="Number of retrieved chunks used as LLM context")
-    model: str | None = Field(None, description="OpenRouter model name (e.g. nvidia/nemotron-3.5-lightning:free)")
-    api_key: str | None = Field(None, description="Optional OpenRouter API key override")
+    model: str | None = Field(None, description="Optional Google Gemini model name")
+    api_key: str | None = Field(None, description="Optional Google Gemini API key override")
     temperature: float = Field(0.1, ge=0.0, le=1.0, description="Sampling temperature")
     language_override: str | None = Field(None, description="Optional language mode override")
 

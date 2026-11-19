@@ -51,7 +51,7 @@ def test_rag_generator_uses_mode_prompt_and_conversation_context(monkeypatch) ->
             ]
         }
 
-    monkeypatch.setattr(generator, "call_openrouter", fake_openrouter)
+    monkeypatch.setattr(generator, "call_gemini_api", fake_openrouter)
     result = generator.generate_rag_answer(
         query="Explain RNN simply",
         retrieved_chunks=[

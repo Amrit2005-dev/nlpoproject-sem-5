@@ -1,6 +1,6 @@
 # PDF Document Vector Store & Grounded RAG Assistant
 
-A complete Retrieval-Augmented Generation (RAG) system that extracts text from PDF, PPTX, and DOCX files, splits them into overlapping chunks, generates 1024-dimensional embeddings with `BAAI/bge-m3`, and answers user questions strictly grounded in the document content using OpenRouter LLMs.
+A complete Retrieval-Augmented Generation (RAG) system that extracts text from PDF, PPTX, and DOCX files, splits them into overlapping chunks, generates 1024-dimensional embeddings with `BAAI/bge-m3`, and answers user questions strictly grounded in the document content using Google's Gemini API.
 
 ---
 
@@ -11,7 +11,7 @@ A complete Retrieval-Augmented Generation (RAG) system that extracts text from P
 - **Flexible Vector Storage (Dual-Mode)**:
   - **SQLite Fallback (Zero Setup)**: Automatically uses a local SQLite vector store with high-performance NumPy cosine similarity when running locally without Docker.
   - **PostgreSQL + pgvector**: Persists vectors in PostgreSQL with the `pgvector` extension when Docker Compose is running.
-- **Strictly Grounded LLM Answers**: Queries the OpenRouter API with a strict system prompt instructing the model to answer **only** using facts from the retrieved chunks and to refuse speculation if the information is not in the document.
+- **Strictly Grounded LLM Answers**: Queries Google's Gemini API with a strict system prompt instructing the model to answer **only** using facts from the retrieved chunks and to refuse speculation if the information is not in the document.
 - **Source Citations**: Every answer includes the exact document excerpts, chunk indices, and similarity match percentages.
 - **Code-Mixed Indian Language Support**: Detects English, Telugu, Hindi, romanized Telugu/Hindi, and mixed-script input. Answers follow the detected language and casual/formal register.
 - **Context-Aware Query Handling**: Classifies requests by intent, corrects common academic typos, and rewrites conversational follow-ups using recent chat history. Specialized teaching, viva, summary, and extraction prompts retain document grounding and citations.
@@ -31,10 +31,11 @@ A complete Retrieval-Augmented Generation (RAG) system that extracts text from P
 Edit `.env` (or copy from `.env.example`):
 
 ```bash
-# OpenRouter LLM Configuration
-OPENROUTER_API_KEY=your_openrouter_api_key_here
-OPENROUTER_MODEL=nvidia/nemotron-3.5-lightning:free
-OPENROUTER_FALLBACK_MODELS=google/gemma-4-31b-it:free,liquid/lfm-2.5-2.6b:free,xingchen-agi/xing4.0-29b-a4b:free
+# Google Gemini API Configuration
+GEMINI_API_KEY=your_google_ai_api_key_here
+GEMINI_MODEL=gemini-2.5-flash
+GEMINI_BASE_URL=https://generativelanguage.googleapis.com/v1beta
+GEMINI_TIMEOUT_SECONDS=30
 
 # Database Configuration (PostgreSQL with pgvector, falls back to local SQLite if unreachable)
 DATABASE_URL=postgresql://postgres:postgres@localhost:5434/vectordb
@@ -46,6 +47,8 @@ EMBEDDING_MODEL=BAAI/bge-m3
 # API URL
 API_URL=http://localhost:8000
 ```
+
+Create a Gemini API key in [Google AI Studio](https://aistudio.google.com/apikey) and set it as `GEMINI_API_KEY` in your local `.env` file. Keep the key private and do not commit `.env`.
 
 ### 2. Run Locally (Fastest & No Docker Required)
 
@@ -86,7 +89,7 @@ docker compose up --build
 
 ## API Endpoints
 
-- `GET /health` — Check server status, active database engine (PostgreSQL or SQLite), and OpenRouter key status.
+- `GET /health` — Check server status, active database engine (PostgreSQL or SQLite), and Gemini key status.
 - `POST /documents` — Upload a document (`multipart/form-data` with `file`) with page-aware extraction.
 - `POST /documents/index-workspace` — Automatically index PDF documents located in the workspace root with page-level attribution.
 - `GET /documents` — List all stored documents and their chunk counts.
@@ -95,8 +98,8 @@ docker compose up --build
 - `GET /documents/{id}/pages/{page_number}` — Page metadata endpoint (page number, chunk count, section titles, direct file URL).
 - `DELETE /documents/{id}` — Delete a document, its stored vectors, and its file.
 - `POST /rag/search` — Retrieve top matching chunks with page numbers and section headings using vector cosine similarity.
-- `POST /rag/ask` — Semantic retrieval + strictly grounded answer generation with OpenRouter LLM + verified source citations.
-- `GET /rag/models` — List available free OpenRouter LLM models.
+- `POST /rag/ask` — Semantic retrieval + strictly grounded answer generation with Gemini + verified source citations.
+- `GET /rag/models` — Return the configured Gemini model.
 
 ### Example RAG Ask Request with Page Citations
 

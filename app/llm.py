@@ -1,10 +1,15 @@
 import logging
-import os
 import re
 from typing import Any
 
-import requests
 from dotenv import load_dotenv
+
+from backend.config import (
+    DEFAULT_MODEL,
+    GEMINI_API_KEY,
+    UNIQUE_FALLBACK_MODELS,
+)
+from backend.gemini import call_gemini, verify_gemini_api_key
 
 load_dotenv()
 
@@ -23,32 +28,6 @@ def _clean_user_answer(content: Any) -> str:
     if re.match(r"(?i)^analysis\s*[:\n]", text):
         return ""
     return text.strip()
-
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
-OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
-DEFAULT_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemma-4-31b-it:free")
-configured_fallbacks = os.getenv("OPENROUTER_FALLBACK_MODELS", "")
-
-# Pre-tested working free models on OpenRouter
-FALLBACK_MODELS = [
-    DEFAULT_MODEL,
-    "google/gemma-4-31b-it:free",
-    "nvidia/nemotron-3.5-lightning:free",
-    "nvidia/nemotron-3.5-super-vl:free",
-    "recursive/flint-v1.0:free",
-]
-FALLBACK_MODELS.extend(
-    model.strip()
-    for model in configured_fallbacks.split(",")
-    if model.strip()
-)
-
-_seen = set()
-UNIQUE_FALLBACK_MODELS = []
-for m in FALLBACK_MODELS:
-    if m not in _seen:
-        _seen.add(m)
-        UNIQUE_FALLBACK_MODELS.append(m)
 
 SYSTEM_PROMPT = """You are a precise, truth-grounded Question Answering assistant for lecture notes and documents.
 Your task is to answer the user's question STRICTLY and ONLY using the provided document excerpts below.
@@ -200,44 +179,21 @@ def resolve_citations(
     return citations
 
 
-def call_openrouter(
+def call_gemini_api(
     messages: list[dict[str, str]],
-    model: str,
-    api_key: str,
+    model: str | None,
+    api_key: str | None,
     temperature: float = 0.1,
     max_tokens: int = 1000,
 ) -> dict[str, Any]:
-    """Call OpenRouter Chat Completions endpoint."""
-    url = f"{OPENROUTER_BASE_URL.rstrip('/')}/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://localhost:8501",
-        "X-Title": "PDF RAG Assistant",
-    }
-    payload = {
-        "model": model,
-        "messages": messages,
-        "temperature": temperature,
-        "max_tokens": max_tokens,
-    }
-
-    response = requests.post(
-        url,
-        headers=headers,
-        json=payload,
-        timeout=int(os.getenv("OPENROUTER_TIMEOUT_SECONDS", "30")),
+    """Call Gemini's generateContent API."""
+    return call_gemini(
+        messages=messages,
+        model=model,
+        api_key=api_key,
+        temperature=temperature,
+        max_tokens=max_tokens,
     )
-    if response.status_code != 200:
-        error_detail = response.text
-        try:
-            err_json = response.json()
-            error_detail = err_json.get("error", {}).get("message", response.text)
-        except Exception:
-            pass
-        raise RuntimeError(f"OpenRouter error ({response.status_code}): {error_detail}")
-
-    return response.json()
 
 
 def generate_rag_answer(
@@ -251,13 +207,12 @@ def generate_rag_answer(
     missing_facets: list[str] | None = None,
 ) -> dict[str, Any]:
     """
-    Generate an answer using OpenRouter with strict document grounding and verified citations.
-    Automatically falls back across reliable free models if rate-limited.
+    Generate an answer using Gemini with strict document grounding and verified citations.
     """
-    effective_key = (api_key or OPENROUTER_API_KEY).strip()
+    effective_key = (api_key or GEMINI_API_KEY).strip()
     if not effective_key:
         raise ValueError(
-            "OpenRouter API key is missing. Please set OPENROUTER_API_KEY in .env or provide it in the request."
+            "Gemini API key is missing. Set GEMINI_API_KEY in .env or provide it in the request."
         )
 
     context_text = format_context_for_prompt(retrieved_chunks)
@@ -296,8 +251,8 @@ def generate_rag_answer(
     last_error = None
     for target_model in candidate_models:
         try:
-            logger.info("Calling OpenRouter with model: %s", target_model)
-            res_json = call_openrouter(
+            logger.info("Calling Gemini with model: %s", target_model)
+            res_json = call_gemini_api(
                 messages=messages,
                 model=target_model,
                 api_key=effective_key,
@@ -305,7 +260,7 @@ def generate_rag_answer(
             )
             choices = res_json.get("choices", [])
             if not choices:
-                raise RuntimeError("OpenRouter returned empty choices.")
+                raise RuntimeError("Gemini returned empty choices.")
 
             msg = choices[0].get("message", {})
             content = _clean_user_answer(msg.get("content"))
@@ -335,27 +290,5 @@ def generate_rag_answer(
 
 
 def verify_api_key(api_key: str | None = None) -> dict[str, Any]:
-    """Verify that the OpenRouter API key is valid and check credit/rate limits."""
-    effective_key = (api_key or OPENROUTER_API_KEY).strip()
-    if not effective_key:
-        return {"valid": False, "error": "No API key configured"}
-
-    url = f"{OPENROUTER_BASE_URL.rstrip('/')}/auth/key"
-    try:
-        res = requests.get(
-            url,
-            headers={"Authorization": f"Bearer {effective_key}"},
-            timeout=10,
-        )
-        if res.status_code == 200:
-            data = res.json().get("data", {})
-            return {
-                "valid": True,
-                "label": data.get("label", "Key"),
-                "is_free_tier": data.get("is_free_tier", True),
-                "free_daily_remaining": data.get("free_model_daily_requests", {}).get("remaining", "unknown"),
-                "limit_usd": data.get("limit", 0),
-            }
-        return {"valid": False, "error": f"HTTP {res.status_code}: {res.text}"}
-    except Exception as exc:
-        return {"valid": False, "error": str(exc)}
+    """Verify that the Gemini API key can access the configured model."""
+    return verify_gemini_api_key(api_key)

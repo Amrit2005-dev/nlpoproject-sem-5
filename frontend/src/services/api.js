@@ -601,12 +601,12 @@ class ApiService {
     });
   }
 
-  /** List available LLM models from OpenRouter. */
+  /** List configured Google Gemini models. */
   async listModels() {
     try {
       return await this.request('/rag/models');
     } catch (err) {
-      return { default: 'nvidia/nemotron-3.5-lightning:free', recommended_free_models: [] };
+      return { provider: 'Google Gemini', default: 'gemini-2.5-flash', models: [] };
     }
   }
 

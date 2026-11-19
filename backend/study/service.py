@@ -14,12 +14,12 @@ import uuid
 
 from backend import db
 from backend.config import (
-    OPENROUTER_API_KEY,
+    GEMINI_API_KEY,
     DEFAULT_MODEL,
     UNIQUE_FALLBACK_MODELS,
 )
 from backend.rag.embedder import generate_query_embedding
-from backend.rag.generator import call_openrouter, format_context_for_prompt
+from backend.rag.generator import call_gemini_api, format_context_for_prompt
 from backend.study.schemas import (
     LessonExplainResponse,
     LessonPrerequisitesResponse,
@@ -192,13 +192,13 @@ Format your response strictly as valid JSON matching this structure:
 }}
 Return ONLY JSON without markdown blocks.
 """
-    if OPENROUTER_API_KEY.strip():
+    if GEMINI_API_KEY.strip():
         for model in UNIQUE_FALLBACK_MODELS:
             try:
-                res = call_openrouter(
+                res = call_gemini_api(
                     messages=[{"role": "user", "content": prompt}],
                     model=model,
-                    api_key=OPENROUTER_API_KEY,
+                    api_key=GEMINI_API_KEY,
                     temperature=0.2
                 )
                 raw_text = res.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
@@ -323,8 +323,8 @@ def explain_lesson(
     if not retrieved_chunks:
         raise ValueError("No readable PDF text was found for this subject. Re-upload the PDF and try again.")
 
-    if not OPENROUTER_API_KEY.strip():
-        raise RuntimeError("The lesson guide requires an OpenRouter API key. Configure OPENROUTER_API_KEY on the backend.")
+    if not GEMINI_API_KEY.strip():
+        raise RuntimeError("The lesson guide requires a Gemini API key. Configure GEMINI_API_KEY on the backend.")
 
     context_text = format_context_for_prompt(retrieved_chunks)
 
@@ -364,10 +364,10 @@ Cite supported PDF facts inline as [Page N]. Never invent facts or citations. En
 """
     for model in UNIQUE_FALLBACK_MODELS[:2]:
         try:
-            res = call_openrouter(
+            res = call_gemini_api(
                 messages=[{"role": "user", "content": prompt}],
                 model=model,
-                api_key=OPENROUTER_API_KEY,
+                api_key=GEMINI_API_KEY,
                 temperature=0.2,
                 max_tokens=3000,
                 timeout=30
@@ -440,13 +440,13 @@ Return strictly a JSON array of objects with the following schema:
 ]
 Return ONLY JSON without markdown fences.
 """
-    if OPENROUTER_API_KEY.strip():
+    if GEMINI_API_KEY.strip():
         for model in UNIQUE_FALLBACK_MODELS:
             try:
-                res = call_openrouter(
+                res = call_gemini_api(
                     messages=[{"role": "user", "content": prompt}],
                     model=model,
-                    api_key=OPENROUTER_API_KEY,
+                    api_key=GEMINI_API_KEY,
                     temperature=0.2
                 )
                 raw_text = res.get("choices", [{}])[0].get("message", {}).get("content", "").strip()

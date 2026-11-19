@@ -947,4 +947,8 @@ def ask_question(req: RagAskRequest) -> RagAskResponse:
 @app.get("/rag/models")
 def list_available_models() -> dict[str, Any]:
     from backend.config import DEFAULT_MODEL
-    return {"default": DEFAULT_MODEL, "recommended_free_models": UNIQUE_FALLBACK_MODELS}
+    return {
+        "provider": "Google Gemini",
+        "default": DEFAULT_MODEL,
+        "models": UNIQUE_FALLBACK_MODELS,
+    }

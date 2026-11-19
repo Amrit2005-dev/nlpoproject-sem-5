@@ -1,7 +1,7 @@
 """Hybrid intent classification for conversational AI + RAG document assistant.
 
 Combines fast rule-based pattern matching (for obvious intents) with an
-LLM fallback (via OpenRouter) for ambiguous queries.  Supports English
+LLM fallback (via Gemini) for ambiguous queries.  Supports English
 and Hinglish patterns throughout.
 """
 
@@ -11,7 +11,7 @@ import logging
 import re
 from typing import Any
 
-from backend.config import OPENROUTER_API_KEY, UNIQUE_FALLBACK_MODELS
+from backend.config import GEMINI_API_KEY, UNIQUE_FALLBACK_MODELS
 
 logger = logging.getLogger(__name__)
 
@@ -293,7 +293,7 @@ def llm_classify(
     conversation_history: list[dict[str, Any]] | None = None,
     api_key: str | None = None,
 ) -> dict[str, Any]:
-    """Classify intent via a lightweight LLM call to OpenRouter.
+    """Classify intent via a lightweight Gemini API call.
 
     Falls back to ``GENERAL_KNOWLEDGE`` if the LLM call fails or returns
     an unrecognised category.
@@ -307,12 +307,12 @@ def llm_classify(
     conversation_history:
         List of prior messages.
     api_key:
-        Optional explicit OpenRouter API key (falls back to env config).
+        Optional explicit Gemini API key (falls back to env config).
     """
     # Lazy import to avoid circular dependency at module load time
-    from backend.rag.generator import call_openrouter  # noqa: WPS433
+    from backend.rag.generator import call_gemini_api  # noqa: WPS433
 
-    effective_key = (api_key or OPENROUTER_API_KEY or "").strip()
+    effective_key = (api_key or GEMINI_API_KEY or "").strip()
     if not effective_key:
         fallback_intent = "DOCUMENT_QUESTION" if has_documents else "GENERAL_KNOWLEDGE"
         logger.warning("No API key available for LLM intent classification; defaulting to %s.", fallback_intent)
@@ -338,7 +338,7 @@ def llm_classify(
 
     for model in UNIQUE_FALLBACK_MODELS:
         try:
-            response = call_openrouter(
+            response = call_gemini_api(
                 messages=messages,
                 model=model,
                 api_key=effective_key,
@@ -409,7 +409,7 @@ def classify_intent(
     conversation_history:
         Prior conversation messages (list of dicts with ``"text"`` key).
     api_key:
-        Optional OpenRouter API key override.
+        Optional Gemini API key override.
 
     Returns
     -------

@@ -111,8 +111,8 @@ class RagAskRequest(BaseModel):
     query: str = Field(..., description="Question to answer based on the stored documents")
     document_id: uuid.UUID | None = Field(None, description="Optional document ID to restrict context")
     top_k: int = Field(4, ge=1, le=10, description="Number of retrieved chunks used as LLM context")
-    model: str | None = Field(None, description="OpenRouter model name (e.g. nvidia/nemotron-3.5-lightning:free)")
-    api_key: str | None = Field(None, description="Optional OpenRouter API key override")
+    model: str | None = Field(None, description="Optional Google Gemini model name")
+    api_key: str | None = Field(None, description="Optional Google Gemini API key override")
     temperature: float = Field(0.1, ge=0.0, le=1.0, description="Sampling temperature")
 
 
@@ -224,7 +224,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="Document Vector Store & RAG API",
-    description="Extract documents, generate embeddings, store vectors, and perform grounded Q&A with OpenRouter LLMs.",
+    description="Extract documents, generate embeddings, store vectors, and perform grounded Q&A with Google Gemini.",
     lifespan=lifespan,
 )
 
@@ -672,8 +672,9 @@ def ask_question(req: RagAskRequest) -> RagAskResponse:
 
 @app.get("/rag/models")
 def list_available_models() -> dict[str, Any]:
-    """Return available free OpenRouter models."""
+    """Return the configured Google Gemini model."""
     return {
+        "provider": "Google Gemini",
         "default": llm.DEFAULT_MODEL,
-        "recommended_free_models": llm.UNIQUE_FALLBACK_MODELS,
+        "models": llm.UNIQUE_FALLBACK_MODELS,
     }

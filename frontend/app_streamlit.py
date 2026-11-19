@@ -10,7 +10,7 @@ load_dotenv()
 
 # Configuration
 API_URL = os.getenv("API_URL", "http://localhost:8000").rstrip("/")
-DEFAULT_OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY", "")
+DEFAULT_GEMINI_KEY = os.getenv("GEMINI_API_KEY", "")
 
 # In-process direct fallback imports in case FastAPI backend is not started in a separate terminal
 try:
@@ -135,28 +135,21 @@ with st.sidebar:
 
     st.divider()
 
-    # OpenRouter API Key Setting
+    # Gemini API Key Setting
     user_api_key = st.text_input(
-        "OpenRouter API Key:",
-        value=DEFAULT_OPENROUTER_KEY,
+        "Google Gemini API Key:",
+        value=DEFAULT_GEMINI_KEY,
         type="password",
-        help="Get a free key at https://openrouter.ai/keys",
+        help="Get a Gemini API key at https://aistudio.google.com/apikey",
     )
 
     # Model Selection
-    model_options = [
-        "nvidia/nemotron-3.5-lightning:free",
-        "google/gemma-4-31b-it:free",
-        "liquid/lfm-2.5-2.6b:free",
-        "xingchen-agi/xing4.0-29b-a4b:free",
-        "recursive/flint-v1.0:free",
-        "thinkingmachines/inkling:free",
-    ]
+    model_options = ["gemini-2.5-flash", "gemini-2.5-pro"]
     selected_model = st.selectbox(
-        "OpenRouter LLM Model (Free Tier):",
+        "Google Gemini Model:",
         model_options,
         index=0,
-        help="All listed models are 100% free with an OpenRouter API key",
+        help="Availability and usage limits depend on your Google AI Studio account.",
     )
 
     # Search & RAG Parameters

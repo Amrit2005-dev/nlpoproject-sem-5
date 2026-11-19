@@ -25,33 +25,14 @@ VECTOR_DIMENSIONS = 1024
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024  # 25 MB
 SUPPORTED_EXTENSIONS = {".pdf", ".pptx", ".docx"}
 
-# OpenRouter LLM Configuration
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
-OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
-DEFAULT_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemma-4-31b-it:free")
-
-configured_fallbacks = os.getenv("OPENROUTER_FALLBACK_MODELS", "")
-
-# Pre-tested working free models on OpenRouter
-FALLBACK_MODELS = [
-    DEFAULT_MODEL,
-    "google/gemma-4-31b-it:free",
-    "nvidia/nemotron-3.5-lightning:free",
-    "nvidia/nemotron-3.5-super-vl:free",
-    "recursive/flint-v1.0:free",
-]
-FALLBACK_MODELS.extend(
-    model.strip()
-    for model in configured_fallbacks.split(",")
-    if model.strip()
+# Google Gemini API configuration
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_BASE_URL = os.getenv(
+    "GEMINI_BASE_URL",
+    "https://generativelanguage.googleapis.com/v1beta",
 )
-
-_seen = set()
-UNIQUE_FALLBACK_MODELS = []
-for m in FALLBACK_MODELS:
-    if m not in _seen:
-        _seen.add(m)
-        UNIQUE_FALLBACK_MODELS.append(m)
+DEFAULT_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+UNIQUE_FALLBACK_MODELS = [DEFAULT_MODEL]
 
 # JWT Auth Configuration for workspace
 JWT_SECRET = os.getenv("JWT_SECRET", "super_secret_jwt_key_phenomenon_studio_2026_xyz")
