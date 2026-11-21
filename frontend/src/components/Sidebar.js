@@ -279,8 +279,8 @@ export default function Sidebar({
               style={{
                 fontSize: '11px',
                 fontWeight: 700,
-                backgroundColor: syllabusProgress === 100 ? '#dcfce7' : '#e0e7ff',
-                color: syllabusProgress === 100 ? '#15803d' : '#4338ca',
+                backgroundColor: syllabusProgress === 100 ? '#dcfce7' : 'var(--accent-light)',
+                color: syllabusProgress === 100 ? '#15803d' : 'var(--accent-primary)',
                 padding: '2px 7px',
                 borderRadius: '9999px',
                 minWidth: '28px',

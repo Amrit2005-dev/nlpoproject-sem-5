@@ -4,15 +4,22 @@ import { storage } from '../utils/storage';
 
 const AuthContext = createContext();
 
+const DEMO_USER = {
+  id: 'demo-user-1',
+  name: 'Sarvatha',
+  email: 'sarvatha@example.com',
+  avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'
+};
+
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => storage.get('current_user', null));
-  const [token, setToken] = useState(() => storage.get('auth_token', null));
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState(() => storage.get('current_user', DEMO_USER));
+  const [token, setToken] = useState(() => storage.get('auth_token', 'demo-token-active'));
+  const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState(null);
 
   useEffect(() => {
     async function verifyUser() {
-      if (token) {
+      if (token && token !== 'demo-token-active') {
         api.setToken(token);
         try {
           const res = await api.getMe();
@@ -24,7 +31,6 @@ export function AuthProvider({ children }) {
           console.warn('[AuthProvider] Token verification fallback:', e);
         }
       }
-      setIsLoading(false);
     }
     verifyUser();
   }, [token]);
@@ -58,36 +64,33 @@ export function AuthProvider({ children }) {
       storage.set('auth_token', res.token);
       return res;
     } catch (err) {
-      setAuthError(err.message || 'Signup failed');
+      setAuthError(err.message || 'Registration failed');
       throw err;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const demoLogin = async () => {
-    return login('sarvatha@example.com', 'password123');
-  };
-
   const logout = () => {
     setUser(null);
     setToken(null);
-    api.setToken(null);
     storage.remove('current_user');
     storage.remove('auth_token');
+    api.clearToken();
   };
+
+  const isAuthenticated = Boolean(user);
 
   return (
     <AuthContext.Provider
       value={{
         user,
         token,
-        isAuthenticated: !!user,
+        isAuthenticated,
         isLoading,
         authError,
         login,
         signup,
-        demoLogin,
         logout
       }}
     >

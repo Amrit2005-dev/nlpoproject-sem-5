@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import HomeScreen from '../screens/HomeScreen';
+import AnswerEngineScreen from '../screens/AnswerEngineScreen';
 import LoginScreen from '../screens/LoginScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import { useAuth } from '../hooks/useAuth';
@@ -38,10 +39,7 @@ export default function AppNavigator() {
 
   return (
     <Routes>
-      <Route
-        path="/login"
-        element={isAuthenticated ? <Navigate to="/" replace /> : <LoginScreen />}
-      />
+      {/* Primary Workspace Home (All previous UI functions & buttons in original place) */}
       <Route
         path="/"
         element={
@@ -50,6 +48,15 @@ export default function AppNavigator() {
           </ProtectedRoute>
         }
       />
+
+      {/* Answer Engine Dedicated View */}
+      <Route path="/perplexity" element={<AnswerEngineScreen />} />
+
+      <Route
+        path="/login"
+        element={isAuthenticated ? <Navigate to="/" replace /> : <LoginScreen />}
+      />
+
       <Route
         path="/profile"
         element={
@@ -58,6 +65,7 @@ export default function AppNavigator() {
           </ProtectedRoute>
         }
       />
+
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

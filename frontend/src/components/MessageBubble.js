@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Copy, Check, Sparkles, User } from 'lucide-react';
+import { Copy, Check, Sparkles, User, ExternalLink } from 'lucide-react';
 import { formatTimestamp } from '../utils/formatters';
 
 export default function MessageBubble({ message, isAssistant, userAvatar }) {
@@ -57,16 +57,16 @@ export default function MessageBubble({ message, isAssistant, userAvatar }) {
       }
       // Standard paragraph
       return (
-        <p key={idx} style={{ marginBottom: '4px', lineHeight: 1.55 }}>
+        <p key={idx} style={{ marginBottom: '6px', lineHeight: 1.6 }}>
           {formatInlineText(line)}
         </p>
       );
     });
   };
 
-  // Helper for inline bold, italic, code
+  // Helper for inline bold, italic, code, and rose citation chips
   const formatInlineText = (text) => {
-    const parts = text.split(/(\*\*.*?\*\*|\*.*?\*|`.*?`)/g);
+    const parts = text.split(/(\*\*.*?\*\*|\*.*?\*|`.*?`|\[(?:EXCERPT\s*)?\d+\]|\[cite-\w+\])/g);
     return parts.map((part, i) => {
       if (part.startsWith('**') && part.endsWith('**')) {
         return <strong key={i}>{part.slice(2, -2)}</strong>;
@@ -83,11 +83,20 @@ export default function MessageBubble({ message, isAssistant, userAvatar }) {
               padding: '2px 5px',
               borderRadius: '4px',
               fontSize: '12.5px',
-              fontFamily: 'monospace'
+              fontFamily: 'var(--font-mono)'
             }}
           >
             {part.slice(1, -1)}
           </code>
+        );
+      }
+      // Citation chip detection e.g. [1], [EXCERPT 1], [cite-1]
+      const citeMatch = part.match(/^\[(?:EXCERPT\s*)?(\d+)\]$/i) || part.match(/^\[cite-(\w+)\]$/i);
+      if (citeMatch) {
+        return (
+          <span key={i} className="citation-chip" title={`Citation source ${citeMatch[1]}`}>
+            {citeMatch[1]}
+          </span>
         );
       }
       return part;
@@ -124,7 +133,7 @@ export default function MessageBubble({ message, isAssistant, userAvatar }) {
         }}
       >
         {isAssistant ? (
-          <Sparkles size={16} />
+          <Sparkles size={16} fill="currentColor" />
         ) : userAvatar ? (
           <img
             src={userAvatar}
@@ -139,7 +148,7 @@ export default function MessageBubble({ message, isAssistant, userAvatar }) {
       {/* Bubble Content */}
       <div
         style={{
-          maxWidth: '78%',
+          maxWidth: '82%',
           display: 'flex',
           flexDirection: 'column',
           alignItems: isAssistant ? 'flex-start' : 'flex-end'
@@ -154,7 +163,8 @@ export default function MessageBubble({ message, isAssistant, userAvatar }) {
               color: 'var(--text-subtle)',
               padding: '2px 7px',
               border: '1px solid var(--border-subtle)',
-              borderRadius: '999px'
+              borderRadius: '999px',
+              backgroundColor: 'var(--bg-card)'
             }}
           >
             {message.language.label}
@@ -162,15 +172,16 @@ export default function MessageBubble({ message, isAssistant, userAvatar }) {
         )}
         <div
           style={{
-            padding: '12px 16px',
-            borderRadius: isAssistant ? '4px 16px 16px 16px' : '16px 4px 16px 16px',
+            padding: '14px 18px',
+            borderRadius: isAssistant ? '6px 18px 18px 18px' : '18px 6px 18px 18px',
             backgroundColor: isAssistant ? 'var(--ai-bubble-bg)' : 'var(--user-bubble-bg)',
             color: isAssistant ? 'var(--ai-bubble-text)' : 'var(--user-bubble-text)',
             border: isAssistant ? '1px solid var(--ai-bubble-border)' : 'none',
             boxShadow: 'var(--shadow-sm)',
             fontSize: '14.5px',
             position: 'relative',
-            wordBreak: 'break-word'
+            wordBreak: 'break-word',
+            lineHeight: 1.6
           }}
         >
           {renderFormattedText(message.text)}
@@ -208,7 +219,7 @@ export default function MessageBubble({ message, isAssistant, userAvatar }) {
                 transition: 'color 0.15s'
               }}
             >
-              {copied ? <Check size={12} color="#10b981" /> : <Copy size={12} />}
+              {copied ? <Check size={12} color="var(--accent-primary)" /> : <Copy size={12} />}
               <span>{copied ? 'Copied' : 'Copy'}</span>
             </button>
           )}

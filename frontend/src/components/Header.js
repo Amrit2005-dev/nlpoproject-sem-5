@@ -117,7 +117,7 @@ export default function Header({ isSidebarOpen, onToggleSidebar, onOpenSettings 
             borderRadius: '9px',
             border: '1px solid var(--border-color)',
             backgroundColor: 'var(--bg-card)',
-            color: isDark ? '#fbbf24' : '#6366f1',
+            color: isDark ? '#fbbf24' : 'var(--accent-primary)',
             cursor: 'pointer',
             transition: 'all 0.2s'
           }}
@@ -251,7 +251,7 @@ export default function Header({ isSidebarOpen, onToggleSidebar, onOpenSettings 
                   textAlign: 'left'
                 }}
               >
-                {isDark ? <Sun size={15} style={{ color: '#fbbf24' }} /> : <Moon size={15} style={{ color: '#6366f1' }} />}
+                {isDark ? <Sun size={15} style={{ color: '#fbbf24' }} /> : <Moon size={15} style={{ color: 'var(--accent-primary)' }} />}
                 <span>{isDark ? 'Light Theme' : 'Dark Theme'}</span>
               </button>
 
