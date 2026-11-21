@@ -7,14 +7,14 @@
   --sidebar-width: 270px;
   --header-height: 60px;
 
-  /* Color System: Cool Paper Canvas + White Surfaces + Near-Black Ink + Rose Accent */
+  /* Color System: Cool Paper Canvas + White Surfaces + Near-Black Ink + Teal Accent */
   --bg-app: #f5f6f8;             /* Cool paper canvas #f5f6f8 */
   --bg-sidebar: #ffffff;         /* Pure white surface */
   --bg-card: #ffffff;            /* Pure white surface */
   --bg-card-hover: #fafbfc;
   --bg-input: #ffffff;
   --bg-hover: #f1f3f6;
-  --bg-active: #fff1f3;          /* Rose active tint */
+  --bg-active: #f0fdfa;          /* Teal active tint #f0fdfa */
 
   --text-primary: #14161b;       /* Near-black ink #14161b */
   --text-secondary: #5b6472;     /* Muted slate meta #5b6472 */
@@ -23,18 +23,18 @@
 
   --border-color: #e6e8ec;       /* Hairline #e6e8ec */
   --border-subtle: #edf0f4;
-  --border-focus: #e11d48;
+  --border-focus: #0d9488;       /* Teal focus #0d9488 */
 
-  /* ONE Brand Accent: Rose/Raspberry */
-  --accent-primary: #e11d48;     /* Rose #e11d48 */
-  --accent-hover: #be123c;       /* Rose hover #be123c */
-  --accent-light: #fff1f3;       /* Rose tint #fff1f3 */
-  --accent-sparkle: #e11d48;     /* Rose sparkle */
-  --accent-sparkle-bg: #fff1f3;  /* Rose sparkle bg */
-  --accent-border: #fbcfd8;      /* Rose border #fbcfd8 */
+  /* ONE Brand Accent: Teal */
+  --accent-primary: #0d9488;     /* Teal 600 #0d9488 */
+  --accent-hover: #0f766e;       /* Teal 700 #0f766e */
+  --accent-light: #f0fdfa;       /* Teal 50 tint #f0fdfa */
+  --accent-sparkle: #0d9488;     /* Teal sparkle */
+  --accent-sparkle-bg: #f0fdfa;  /* Teal sparkle bg */
+  --accent-border: #99f6e4;      /* Teal 200 border #99f6e4 */
 
   /* Chat Bubbles */
-  --user-bubble-bg: #e11d48;
+  --user-bubble-bg: #0d9488;     /* Teal user message bubble */
   --user-bubble-text: #ffffff;
   --ai-bubble-bg: #ffffff;
   --ai-bubble-text: #14161b;
@@ -49,7 +49,7 @@
   --badge-bg: #eef0f3;
   --badge-text: #5b6472;
 
-  /* Answer Engine variables */
+  /* Answer Engine variables (Teal Theme) */
   --canvas: #f5f6f8;
   --surface: #ffffff;
   --ink: #14161b;
@@ -58,11 +58,11 @@
   --hairline: #e6e8ec;
   --neutral-fill: #eef0f3;
   --neutral-hover: #f1f3f6;
-  --rose: #e11d48;
-  --rose-hover: #be123c;
-  --rose-tint: #fff1f3;
-  --rose-border: #fbcfd8;
-  --rose-ring: rgba(225, 29, 72, 0.15);
+  --rose: #0d9488;               /* Teal accent */
+  --rose-hover: #0f766e;
+  --rose-tint: #f0fdfa;
+  --rose-border: #99f6e4;
+  --rose-ring: rgba(13, 148, 136, 0.2);
   --radius-card: 16px;
   --radius-pill: 9999px;
   --radius-button: 9999px;
@@ -75,7 +75,7 @@
   --bg-card-hover: #222730;
   --bg-input: #1a1e25;
   --bg-hover: #222731;
-  --bg-active: #2b1820;
+  --bg-active: #042f2e;
 
   --text-primary: #f5f6f8;
   --text-secondary: #9aa2b1;
@@ -84,16 +84,16 @@
 
   --border-color: #262b35;
   --border-subtle: #1f232c;
-  --border-focus: #f43f5e;
+  --border-focus: #14b8a6;
 
-  --accent-primary: #e11d48;
-  --accent-hover: #f43f5e;
-  --accent-light: rgba(225, 29, 72, 0.15);
-  --accent-sparkle: #fb7185;
-  --accent-sparkle-bg: rgba(225, 29, 72, 0.12);
-  --accent-border: rgba(251, 113, 133, 0.3);
+  --accent-primary: #14b8a6;
+  --accent-hover: #2dd4bf;
+  --accent-light: rgba(20, 184, 166, 0.15);
+  --accent-sparkle: #2dd4bf;
+  --accent-sparkle-bg: rgba(20, 184, 166, 0.12);
+  --accent-border: rgba(45, 212, 191, 0.3);
 
-  --user-bubble-bg: #e11d48;
+  --user-bubble-bg: #0d9488;
   --user-bubble-text: #ffffff;
   --ai-bubble-bg: #1c2027;
   --ai-bubble-text: #f5f6f8;
@@ -254,7 +254,7 @@ html, body, #root {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(225, 29, 72, 0.28);
+  box-shadow: 0 2px 6px rgba(13, 148, 136, 0.28);
   transition: all 0.15s ease;
 }
 .send-button:hover:not(:disabled) {
@@ -308,7 +308,7 @@ html, body, #root {
   transition: all 0.15s ease;
 }
 .citation-chip:hover {
-  background-color: #ffe4e6;
+  background-color: #ccfbf1;
   border-color: var(--accent-primary);
   transform: translateY(-1px);
 }
@@ -856,7 +856,7 @@ html, body, #root {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(225, 29, 72, 0.3);
+  box-shadow: 0 2px 6px rgba(13, 148, 136, 0.3);
 }
 .composer-send-btn:hover {
   background-color: var(--rose-hover);
@@ -947,7 +947,7 @@ html, body, #root {
   color: var(--ink);
 }
 .source-card.active-citation .source-card-favicon {
-  background-color: #fecdd3;
+  background-color: #ccfbf1;
   color: var(--rose);
 }
 .source-card-domain {
