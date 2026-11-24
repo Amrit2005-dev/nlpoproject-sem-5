@@ -26,6 +26,13 @@ def test_romanized_hindi():
     assert "en" in result["languages"]
 
 
+def test_hindi_requested_in_english_query():
+    result = detect_language("Give me summary of this PDF in Hindi")
+    assert "hi-rom" in result["languages"]
+    assert "en" in result["languages"]
+    assert result["code_mixed"] is True
+
+
 def test_manual_override():
     result = detect_language("Send me the report", "te-rom|en")
     assert result["languages"] == ["te-rom", "en"]

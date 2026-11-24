@@ -29,6 +29,7 @@ HINDI_MARKERS = {
     "kyun", "kyon", "hai", "hain", "tha", "thi", "nahi", "nahin", "haan",
     "chahiye", "bata", "batao", "karo", "karna", "kar", "raha", "rahi", "bahut",
     "thoda", "abhi", "kuch", "sab", "bhi", "matlab", "samajh", "kripya",
+    "hindi", "hind", "mein", "ka", "ki", "ke", "se", "dikhao", "bataiye",
 }
 
 CASUAL_MARKERS = {

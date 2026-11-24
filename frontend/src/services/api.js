@@ -240,6 +240,9 @@ class ApiService {
       return await res.json();
     } catch (err) {
       console.warn(`[API] Failed to fetch ${endpoint}: ${err.message}. Using fallback storage.`);
+      if (err instanceof TypeError) {
+        throw new Error('Cannot reach the backend API at port 8000. Start the FastAPI server and try again.');
+      }
       throw err;
     }
   }
@@ -396,7 +399,10 @@ class ApiService {
         id: 'msg-' + (Date.now() + 1),
         sender: 'assistant',
         text: answer,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        language: ragResult.language_detection || null,
+        citations: ragResult.citations || [],
+        sources: ragResult.sources || []
       };
       return {
         userMessage,

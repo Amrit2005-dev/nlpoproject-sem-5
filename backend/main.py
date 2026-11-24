@@ -426,7 +426,7 @@ def send_message(
     sources: list[dict] = []
 
     conv = get_conversational_response(corrected_query)
-    if conv:
+    if conv and not language_info.get("code_mixed"):
         ai_text = conv
     elif query_info["comprehensive_explanation"]:
         ai_text = "Select the document you want explained in full, then ask again."
@@ -818,7 +818,7 @@ def ask_question(req: RagAskRequest) -> RagAskResponse:
     comprehensive_explanation = query_info["comprehensive_explanation"]
 
     conv = get_conversational_response(corrected_query)
-    if conv:
+    if conv and not language_info.get("code_mixed"):
         return RagAskResponse(
             query=query,
             answer=conv,

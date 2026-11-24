@@ -213,11 +213,19 @@ def generate_chat_answer(
 
     language_instruction = ""
     if language_info:
-        language_instruction = (
-            "\nReply in "
-            f"{language_info.get('label', 'the user language')} "
-            f"with a {language_info.get('register', 'casual')} tone."
-        )
+        label = language_info.get("label", "the user language")
+        register = language_info.get("register", "casual")
+        if language_info.get("code_mixed"):
+            language_instruction = (
+                f"\nReply naturally in a code-mixed style using {label}. "
+                "Mix the languages in the same response instead of answering in only one language."
+                f" Use a {register} tone."
+            )
+        else:
+            language_instruction = (
+                f"\nReply in {label} "
+                f"with a {register} tone."
+            )
     messages = [
         {
             "role": "system",
@@ -293,10 +301,19 @@ def generate_rag_answer(
     missing_text = ", ".join(missing_facets or []) or "none"
     language_instruction = ""
     if language_info:
-        language_instruction = (
-            f"Reply in {language_info.get('label', 'the user language')} "
-            f"with a {language_info.get('register', 'casual')} tone. "
-        )
+        label = language_info.get("label", "the user language")
+        register = language_info.get("register", "casual")
+        if language_info.get("code_mixed"):
+            language_instruction = (
+                f"Reply naturally in a code-mixed style using {label}. "
+                "Mix the languages in the same response instead of answering in only one language."
+                f" Use a {register} tone. "
+            )
+        else:
+            language_instruction = (
+                f"Reply in {label} "
+                f"with a {register} tone. "
+            )
     if intent:
         question_plan = {
             "labels": question_labels or [],
